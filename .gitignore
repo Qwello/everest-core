@@ -3,7 +3,4 @@
 .cache/
 workspace.yaml
 .vscode/
-bazel-bin
-bazel-everest-core
-bazel-out
-bazel-testlogs
+/bazel-*

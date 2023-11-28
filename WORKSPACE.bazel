@@ -20,7 +20,7 @@ load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencie
 
 crate_universe_dependencies()
 
-load("@rules_rust//crate_universe:defs.bzl", "crates_repository")
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository", "crate")
 
 crates_repository(
     name = "crate_index",
@@ -31,25 +31,16 @@ crates_repository(
         "//modules/rust_examples/RsExample:Cargo.toml",
         "//modules/rust_examples/RsExampleUser:Cargo.toml",
     ],
+    annotations = {
+        "everestrs": [crate.annotation(
+            crate_features = ["build_bazel"],
+        )],
+    },
 )
 
 load("@crate_index//:defs.bzl", "crate_repositories")
 
 crate_repositories()
-
-http_archive(
-    name = "everest-framework",
-    url = "https://github.com/dorezyuk/everest-framework/archive/28ebfd9338c6272473f45e5b16845aba58f58d28.tar.gz",
-    strip_prefix = "everest-framework-28ebfd9338c6272473f45e5b16845aba58f58d28",
-)
-
-load("@everest-framework//third-party/bazel:repos.bzl", "everest_framework_repos")
-
-everest_framework_repos()
-
-load("@everest-framework//third-party/bazel:defs.bzl", "everest_framework_deps")
-
-everest_framework_deps()
 
 load("//third-party/bazel:repos.bzl", "everest_core_repos")
 
@@ -58,3 +49,11 @@ everest_core_repos()
 load("//third-party/bazel:defs.bzl", "everest_core_defs")
 
 everest_core_defs()
+
+load("@everest-framework//third-party/bazel:repos.bzl", "everest_framework_repos")
+
+everest_framework_repos()
+
+load("@everest-framework//third-party/bazel:defs.bzl", "everest_framework_deps")
+
+everest_framework_deps()
