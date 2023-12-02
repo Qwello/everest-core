@@ -82,6 +82,7 @@ struct Conf {
     bool disable_authentication;
     bool sae_j2847_2_bpt_enabled;
     std::string sae_j2847_2_bpt_mode;
+    bool request_zero_power_in_idle;
 };
 
 class EvseManager : public Everest::ModuleBase {
@@ -237,6 +238,9 @@ private:
     Everest::Thread telemetryThreadHandle;
 
     void fail_session();
+
+    // setup sae j2847/2 v2h mode
+    void setup_v2h_mode();
 
     static constexpr auto CABLECHECK_CONTACTORS_CLOSE_TIMEOUT{std::chrono::seconds(5)};
 

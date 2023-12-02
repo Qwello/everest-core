@@ -1,7 +1,7 @@
 ---
 everest-framework:
   git: https://github.com/EVerest/everest-framework.git
-  git_tag: 49f5f30
+  git_tag: 9604e06
 sigslot:
   git: https://github.com/palacaze/sigslot
   git_tag: v1.2.0
@@ -38,11 +38,11 @@ libcurl:
 # OCPP
 libocpp:
   git: https://github.com/EVerest/libocpp.git
-  git_tag: v0.9.4
+  git_tag: 07295a8
 # Josev
 Josev:
   git: https://github.com/EVerest/ext-switchev-iso15118.git
-  git_tag: a3852ba
+  git_tag: 928f678
 # OpenV2G
 ext-openv2g:
   git: https://github.com/EVerest/ext-openv2g.git
@@ -63,4 +63,4 @@ everest-utils:
 # setting it here can be misleading since it does not affect the version being used
 libevse-security:
   git: https://github.com/EVerest/libevse-security.git
-  git_tag: v0.2.0
+  git_tag: v0.3.0

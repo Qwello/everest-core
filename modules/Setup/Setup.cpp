@@ -13,8 +13,6 @@
 
 namespace module {
 
-namespace fs = std::filesystem;
-
 void to_json(json& j, const NetworkDeviceInfo& k) {
     j = json::object({{"interface", k.interface},
                       {"wireless", k.wireless},
@@ -22,7 +20,8 @@ void to_json(json& j, const NetworkDeviceInfo& k) {
                       {"rfkill_id", k.rfkill_id},
                       {"ipv4", k.ipv4},
                       {"ipv6", k.ipv6},
-                      {"mac", k.mac}});
+                      {"mac", k.mac},
+                      {"link_type", k.link_type}});
 }
 
 void to_json(json& j, const WifiInfo& k) {
@@ -46,8 +45,11 @@ void from_json(const json& j, WifiCredentials& k) {
 }
 
 void to_json(json& j, const WifiList& k) {
-    j = json::object(
-        {{"interface", k.interface}, {"network_id", k.network_id}, {"ssid", k.ssid}, {"connected", k.connected}});
+    j = json::object({{"interface", k.interface},
+                      {"network_id", k.network_id},
+                      {"ssid", k.ssid},
+                      {"connected", k.connected},
+                      {"signal_level", k.signal_level}});
 }
 
 void to_json(json& j, const InterfaceAndNetworkId& k) {
@@ -324,6 +326,19 @@ void Setup::discover_network() {
     this->publish_configured_networks();
 }
 
+std::string Setup::read_type_file(const fs::path& type_path) {
+    if (!fs::exists(type_path)) {
+        return "";
+    }
+
+    std::ifstream ifs(type_path.c_str());
+    std::string type_file((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+    // trim newlines
+    type_file.erase(std::remove(type_file.begin(), type_file.end(), '\n'), type_file.end());
+
+    return type_file;
+}
+
 std::vector<NetworkDeviceInfo> Setup::get_network_devices() {
     auto sys_net_path = fs::path("/sys/class/net");
     auto sys_virtual_net_path = fs::path("/sys/devices/virtual/net");
@@ -337,22 +352,20 @@ std::vector<NetworkDeviceInfo> Setup::get_network_devices() {
             continue;
         }
 
-        std::ifstream ifs(type_path.c_str());
-        std::string type_file((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-        // trim newlines
-        type_file.erase(std::remove(type_file.begin(), type_file.end(), '\n'), type_file.end());
+        std::string type_file = this->read_type_file(type_path);
+
+        auto interface = net_path.filename();
+        auto virtual_interface = sys_virtual_net_path / interface;
 
         // check if type is ethernet:
         if (type_file == "1") {
-            auto interface = net_path.filename();
-
-            auto virtual_interface = sys_virtual_net_path / interface;
             if (fs::exists(virtual_interface)) {
                 continue;
             }
 
             auto device = NetworkDeviceInfo();
             device.interface = interface.string();
+            device.link_type = "ether";
 
             // check if its wireless or not:
             auto wireless_path = net_path / "wireless";
@@ -371,6 +384,36 @@ std::vector<NetworkDeviceInfo> Setup::get_network_devices() {
             }
 
             device_info.push_back(device);
+        } else if (type_file == "65534") {
+            if (!fs::exists(virtual_interface)) {
+                continue;
+            }
+
+            auto virtual_type_path = virtual_interface / "type";
+
+            if (!fs::exists(virtual_type_path)) {
+                continue;
+            }
+
+            std::string virtual_type_file = this->read_type_file(virtual_type_path);
+            if (virtual_type_file == type_file) {
+                // assume it's a vpn, but check ip link
+                auto ip_output = this->run_application("ip", {"--json", "-details", "link", "show", interface});
+                if (ip_output.exit_code != 0) {
+                    continue;
+                }
+                const auto ip_json = json::parse(ip_output.output);
+                if (ip_json.size() < 1) {
+                    continue;
+                }
+                const auto& entry = ip_json.at(0);
+                if (entry.contains("linkinfo") and entry.at("linkinfo").contains("info_kind")) {
+                    auto device = NetworkDeviceInfo();
+                    device.interface = interface.string();
+                    device.link_type = entry.at("linkinfo").at("info_kind");
+                    device_info.push_back(device);
+                }
+            }
         }
     }
 
@@ -489,6 +532,20 @@ std::vector<WifiList> Setup::list_configured_networks(std::string interface) {
             }
         }
     }
+    std::map<std::string, std::string> wpa_cli_signal_poll_map;
+    auto wpa_cli_signal_poll_output = this->run_application("wpa_cli", {"-i", interface, "signal_poll"});
+    if (wpa_cli_signal_poll_output.exit_code == 0) {
+
+        for (auto wpa_cli_signal_poll_it = wpa_cli_signal_poll_output.split_output.begin();
+             wpa_cli_signal_poll_it != wpa_cli_signal_poll_output.split_output.end(); ++wpa_cli_signal_poll_it) {
+            std::vector<std::string> wpa_cli_signal_poll_columns;
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+            boost::split(wpa_cli_signal_poll_columns, *wpa_cli_signal_poll_it, boost::is_any_of("="));
+            if (wpa_cli_signal_poll_columns.size() == 2) {
+                wpa_cli_signal_poll_map[wpa_cli_signal_poll_columns.at(0)] = wpa_cli_signal_poll_columns.at(1);
+            }
+        }
+    }
 
     auto list_networks_results = wpa_cli_list_networks_output.split_output;
     if (list_networks_results.size() >= 2) {
@@ -504,12 +561,17 @@ std::vector<WifiList> Setup::list_configured_networks(std::string interface) {
             wifi_list.network_id = std::stoi(list_networks_results_columns.at(0));
             wifi_list.ssid = list_networks_results_columns.at(1);
             wifi_list.connected = false;
+            wifi_list.signal_level = -100; // -100 dBm is the minimum for wifi
+
             if (wpa_cli_status_map.count("id") && wpa_cli_status_map.count("ssid") &&
                 wpa_cli_status_map.count("wpa_state")) {
                 if (wpa_cli_status_map.at("id") == list_networks_results_columns.at(0) &&
                     wpa_cli_status_map.at("ssid") == wifi_list.ssid &&
                     wpa_cli_status_map.at("wpa_state") == "COMPLETED") {
                     wifi_list.connected = true;
+                    if (wpa_cli_signal_poll_map.count("RSSI")) {
+                        wifi_list.signal_level = std::stoi(wpa_cli_signal_poll_map.at("RSSI"));
+                    }
                 }
             }
 
@@ -812,8 +874,9 @@ void Setup::populate_ip_addresses(std::vector<NetworkDeviceInfo>& device_info) {
         if (device == device_info.end()) {
             continue;
         }
-
-        device->mac = ip_object.at("address");
+        if (ip_object.contains("address")) {
+            device->mac = ip_object.at("address");
+        }
         add_addr_infos_to_device(ip_object.at("addr_info"), *device);
     }
 }
