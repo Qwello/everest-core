@@ -180,7 +180,6 @@ void evSerial::handle_packet(uint8_t* buf, int len) {
         case McuToEverest_lock_state_tag:
             signal_lock_state(msg_in.connector, msg_in.payload.lock_state);
             break;
-
         }
 }
 

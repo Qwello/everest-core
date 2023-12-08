@@ -104,8 +104,7 @@ void EvseManager::init() {
 void EvseManager::ready() {
 
     bsp = std::unique_ptr<IECStateMachine>(new IECStateMachine(r_bsp));
-    charger =
-        std::unique_ptr<Charger>(new Charger(bsp, r_powermeter_billing(), config.connector_type, config.evse_id));
+    charger = std::unique_ptr<Charger>(new Charger(bsp, r_powermeter_billing(), config.connector_type, config.evse_id));
 
     if (get_hlc_enabled()) {
 
@@ -877,8 +876,7 @@ void EvseManager::ready() {
     charger->enable(0);
 
     this->p_evse->publish_ready(true);
-    EVLOG_info << fmt::format(fmt::emphasis::bold | fg(fmt::terminal_color::green),
-                              "🌀🌀🌀 Ready to start charging 🌀🌀🌀");
+    EVLOG_info << fmt::format(fmt::emphasis::bold | fg(fmt::terminal_color::green), "🌀🌀🌀 Ready to start charging 🌀🌀🌀");
 }
 
 types::powermeter::Powermeter EvseManager::get_latest_powermeter_data_billing() {
