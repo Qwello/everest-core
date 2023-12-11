@@ -339,7 +339,7 @@ void powermeterImpl::read_powermeter_values() {
         readRegister(register_data);
     }
     this->pm_last_values.timestamp = Everest::Date::to_rfc3339(date::utc_clock::now());
-    EVLOG_warn << "publishing the last values " << this->pm_last_values;
+    EVLOG_warning << "publishing the last values " << this->pm_last_values;
     this->publish_powermeter(this->pm_last_values);
 }
 
@@ -522,7 +522,7 @@ float powermeterImpl::merge_register_values_into_element(const RegisterData& reg
         auto val = *reinterpret_cast<float*>(&value);
         auto val_scaled = float(val * reg_data.multiplier * pow(10.0, exponent));
 
-        EVLOG_warn << "The raw value " << value << " and scaled " << val_scaled;
+        EVLOG_warning << "The raw value " << value << " and scaled " << val_scaled;
         return val_scaled;
     } else {
         EVLOG_error << "Error! Received message is empty!\n";
