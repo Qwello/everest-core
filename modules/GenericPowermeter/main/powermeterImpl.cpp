@@ -522,7 +522,7 @@ float powermeterImpl::merge_register_values_into_element(const RegisterData& reg
         auto val = *reinterpret_cast<float*>(&value);
         auto val_scaled = float(val * reg_data.multiplier * pow(10.0, exponent));
 
-        EVLOG_warning << "The raw value " << value << " and scaled " << val_scaled;
+        EVLOG_warning << "The raw value " << value << " cast " << val << " and scaled " << val_scaled << " multiplier " << reg_data.multiplier << " exponent " exponent;
         return val_scaled;
     } else {
         EVLOG_error << "Error! Received message is empty!\n";
