@@ -52,7 +52,6 @@ void powermeterImpl::ready() {
 
 TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const TransactionReq& value) {
     EVLOG_info << "Starting transaction";
-    // No need to proceed without the `signature_start`.
 
     // Set the time.
     const auto time = read_register<uint32_t>(UNIX_TIME);
