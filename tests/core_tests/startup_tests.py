@@ -15,6 +15,7 @@ from everest.testing.core_utils.everest_core import EverestCore, Requirement
 from everest.framework import Module, RuntimeSession
 
 
+@pytest.mark.everest_core_config('qwello-test-config-sil.yaml')
 @pytest.mark.asyncio
 async def test_000_startup_check(everest_core: EverestCore):
     logging.info(">>>>>>>>> test_000_startup_check <<<<<<<<<")
