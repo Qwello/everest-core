@@ -65,11 +65,13 @@ TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const Tra
 
     // Set the meta-data.
     std::string data = fmt::format("{} {}", value.evse_id, value.transaction_id);
+    EVLOG_info << "Setting the data " << data;
     write_register(META_DATA_1, data);
 
     // Wait for the signature to finish.
     while (read_register<uint16_t>(SIGNATURE_STATUS_START) == SIGNATURE_STATUS_DONE) {
     }
+    EVLOG_info << "Resetting";
     write_register(SIGNATURE_STATUS_START, SIGNATURE_STATUS_DONE);
 
     // Read the start signature.
@@ -152,8 +154,11 @@ template <typename Input> void powermeterImpl::write_register(const Register& re
         config.powermeter_device_id, register_data.start_register, ser_data);
 
     // Check the result.
-    if (res != StatusCodeEnum::Success)
-        throw std::runtime_error("Failed to write");
+    if (res != StatusCodeEnum::Success) {
+        std::ostringstream oss;
+        std::copy(ser_data.data.begin(), ser_data.data.end(),std::ostream_iterator<int>(oss, ","));
+        throw std::runtime_error("Failed to write " + oss.str());
+    }
 }
 
 } // namespace main
