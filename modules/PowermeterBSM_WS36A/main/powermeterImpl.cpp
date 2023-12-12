@@ -58,6 +58,12 @@ TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const Tra
     const auto time = read_register<uint32_t>(UNIX_TIME);
     EVLOG_info << "Current time " << time;
 
+    {
+        const auto time_point = std::chrono::system_clock::now();
+        const auto time = std::chrono::duration_cast<std::chrono::seconds>(time_point.time_since_epoch()).count();
+        EVLOG_info << "Trying to set the time to  " << time;
+    }
+
     write_register(UNIX_TIME_WITH_UTC_OFFSET, std::chrono::system_clock::now());
 
     const auto utc_offset = get_utc_offset();
