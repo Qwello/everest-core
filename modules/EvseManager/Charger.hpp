@@ -211,7 +211,7 @@ public:
 
 private:
     std::optional<std::string> takeOcmfData(std::optional<std::string>& data);
-    
+
     void bcb_toggle_reset();
     void bcb_toggle_detect_start_pulse();
     void bcb_toggle_detect_stop_pulse();
