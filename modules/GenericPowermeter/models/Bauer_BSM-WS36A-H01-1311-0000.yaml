@@ -97,28 +97,28 @@ power_W:
   function_code_start_reg: 3
   num_registers: 1
   multiplier: 1
-  exponent_register: 40113
+  exponent_register: 40112
   function_code_exp_reg: 3
   L1:
     start_register: 40109
     function_code_start_reg: 3
     num_registers: 1
     multiplier: 1
-    exponent_register: 40113
+    exponent_register: 40112
     function_code_exp_reg: 3
   L2:
     start_register: 40110
     function_code_start_reg: 3
     num_registers: 1
     multiplier: 1
-    exponent_register: 40113
+    exponent_register: 40112
     function_code_exp_reg: 3
   L3:
     start_register: 40111
     function_code_start_reg: 3
     num_registers: 1
     multiplier: 1
-    exponent_register: 40113
+    exponent_register: 40112
     function_code_exp_reg: 3
 reactive_power_VAR:
   start_register: 40118
@@ -153,35 +153,35 @@ current_A:
   function_code_start_reg: 3
   num_registers: 1
   multiplier: 1
-  exponent_register: 40097
+  exponent_register: 40096
   function_code_exp_reg: 3
   L1:
     start_register: 40093
     function_code_start_reg: 3
     num_registers: 1
     multiplier: 1
-    exponent_register: 40097
+    exponent_register: 40096
     function_code_exp_reg: 3
   L2:
     start_register: 40094
     function_code_start_reg: 3
     num_registers: 1
     multiplier: 1
-    exponent_register: 40097
+    exponent_register: 40096
     function_code_exp_reg: 3
   L3:
     start_register: 40095
     function_code_start_reg: 3
     num_registers: 1
     multiplier: 1
-    exponent_register: 40097
+    exponent_register: 40096
     function_code_exp_reg: 3
 frequency_Hz:
   start_register: 40106
   function_code_start_reg: 3
   num_registers: 1
   multiplier: 1
-  exponent_register: 0
+  exponent_register: 40107
   function_code_exp_reg: 3
   L1:
     start_register: 0
