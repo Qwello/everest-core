@@ -101,7 +101,8 @@ TransactionStartResponse powermeterImpl::handle_start_transaction(TransactionReq
         return handle_start_transaction_impl(value);
     } catch (const std::exception& _ex) {
         EVLOG_error << "Failed to start the transaction: " << _ex.what();
-        return {TransactionRequestStatus::UNEXPECTED_ERROR, _ex.what()};
+        // TODO(ddo) Ignore the errors for now to keep going.
+        return {TransactionRequestStatus::OK, _ex.what()};
     }
 }
 

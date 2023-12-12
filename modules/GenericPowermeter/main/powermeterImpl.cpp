@@ -339,7 +339,7 @@ void powermeterImpl::read_powermeter_values() {
         readRegister(register_data);
     }
     this->pm_last_values.timestamp = Everest::Date::to_rfc3339(date::utc_clock::now());
-    EVLOG_warning << "publishing the last values " << this->pm_last_values;
+    EVLOG_debug << "publishing the last values " << this->pm_last_values;
     this->publish_powermeter(this->pm_last_values);
 }
 
@@ -367,8 +367,7 @@ void powermeterImpl::readRegister(const RegisterData& register_config) {
 
         if (register_config.exponent_register_function == READ_INPUT_REGISTER) {
             exponent_response = mod->r_serial_comm_hub->call_modbus_read_input_registers(
-                config.powermeter_device_id, register_config.exponent_register - config.modbus_base_address,
-                1);
+                config.powermeter_device_id, register_config.exponent_register - config.modbus_base_address, 1);
         }
     }
 
@@ -518,11 +517,11 @@ float powermeterImpl::merge_register_values_into_element(const RegisterData& reg
             throw std::runtime_error("Values of more than 2 registers in size are currently not supported!");
         }
 
-
         auto val = static_cast<float>(value);
         auto val_scaled = float(val * reg_data.multiplier * pow(10.0, exponent));
 
-        EVLOG_warning << "The raw value " << value << " cast " << val << " and scaled " << val_scaled << " multiplier " << reg_data.multiplier << " exponent " << exponent;
+        EVLOG_debug << "The raw value " << value << " cast " << val << " and scaled " << val_scaled << " multiplier "
+                    << reg_data.multiplier << " exponent " << exponent;
         return val_scaled;
     } else {
         EVLOG_error << "Error! Received message is empty!\n";
