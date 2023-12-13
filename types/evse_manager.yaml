@@ -178,9 +178,6 @@ types:
         description: Transaction start exported meter value
         type: object
         $ref: /powermeter#/Powermeter
-      signed_meter_value:
-        description: Signed meter value
-        type: string
       reservation_id:
         description: Id of the reservation
         type: integer
@@ -200,7 +197,10 @@ types:
         description: Transaction finished meter value
         type: object
         $ref: /powermeter#/Powermeter
-      signed_meter_value:
+      start_signed_meter_value:
+        description: Signed meter value
+        type: string
+      stop_signed_meter_value:
         description: Signed meter value
         type: string
       reason:
