@@ -1068,6 +1068,8 @@ bool Charger::startTransaction() {
     stop_transaction_id_tag.clear();
     transaction_active = true;
 
+    // The `TransactionStarted` is a time critical event. We send it before
+    // trying to sign the meter values, which takes time to complete.
     signalEvent(types::evse_manager::SessionEventEnum::TransactionStarted);
     // TODO(ddo) client_id, tariff_id, cable_id and user_data are currently not
     // set.
