@@ -4,9 +4,11 @@
 #include "powermeterImpl.hpp"
 
 #include <GenericPowermeter/serialization.hpp>
+#include <array>
 #include <chrono>
 #include <ctime>
 #include <fmt/core.h>
+#include <random>
 #include <stdexcept>
 #include <string>
 
@@ -34,6 +36,38 @@ constexpr module::utils::Register META_DATA_1{40279, 70};
 
 /// @brief The status when reading the
 constexpr uint16_t SIGNATURE_STATUS_DONE = 2;
+
+/// @brief returns a random id consisting of the current timestamp padded with
+/// a random hex string until it reaches 20 chars.
+std::string get_random_id() {
+    // Get the current seconds as stirng.
+    using namespace std::chrono;
+    const auto now = system_clock::now();
+    const auto secs = duration_cast<seconds>(now.time_since_epoch()).count();
+    auto out = std::to_string(secs);
+
+    // Check if we have reached the expected size.
+    constexpr size_t length = 20;
+    constexpr std::array<char, 16> hex_values = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                                 '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+    if (length <= out.size())
+        return out;
+
+    // Pad them with a random hex number until we have reached the expected
+    // length.
+    out.reserve(20);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    // Note: uses the closed interval [a, b].
+    static_assert(!hex_values.empty(), "prevent underflow");
+    std::uniform_int_distribution<int> uniform_dist(0, hex_values.size() - 1);
+
+    const auto diff = length - out.size();
+    for (int ii = 0; ii != diff; ++ii)
+        out.push_back(hex_values.at(uniform_dist(gen)));
+
+    return out;
+}
 
 } // namespace
 
@@ -64,7 +98,8 @@ TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const Tra
     write_register(UTC_OFFSET, utc_offset);
 
     // Set the meta-data.
-    std::string data = fmt::format("{} {}", value.evse_id, value.transaction_id);
+    const auto transaction_id = get_random_id();
+    std::string data = fmt::format("{} {}", value.evse_id, transaction_id);
     write_register(META_DATA_1, data);
 
     // Wait for the signature to finish.
