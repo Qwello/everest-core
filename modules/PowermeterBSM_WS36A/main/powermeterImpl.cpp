@@ -8,7 +8,10 @@
 #include <chrono>
 #include <ctime>
 #include <fmt/core.h>
+#include <ios>
+#include <limits>
 #include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -46,25 +49,23 @@ std::string get_random_id() {
     const auto secs = duration_cast<seconds>(now.time_since_epoch()).count();
     auto out = std::to_string(secs);
 
-    // Check if we have reached the expected size.
-    constexpr size_t length = 20;
-    constexpr std::array<char, 16> hex_values = {'0', '1', '2', '3', '4', '5', '6', '7',
-                                                 '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-    if (length <= out.size())
-        return out;
-
     // Pad them with a random hex number until we have reached the expected
     // length.
-    out.reserve(20);
+    constexpr size_t length = 20;
+    out.reserve(length);
     std::random_device rd;
     std::mt19937 gen(rd());
-    // Note: uses the closed interval [a, b].
-    static_assert(!hex_values.empty(), "prevent underflow");
-    std::uniform_int_distribution<int> uniform_dist(0, hex_values.size() - 1);
-
-    const auto diff = length - out.size();
-    for (int ii = 0; ii != diff; ++ii)
-        out.push_back(hex_values.at(uniform_dist(gen)));
+    std::uniform_int_distribution<size_t> uniform_dist(0, std::numeric_limits<size_t>::max());
+    // If we have a machine where we can't generate `length` chars at once
+    // we loop.
+    while (out.size() < length) {
+        std::stringstream sst;
+        sst << std::hex << uniform_dist(gen);
+        const auto str = sst.str();
+        const auto size = std::min(length - out.size(), str.size());
+        for (auto ii = 0; ii != size; ++ii)
+            out.push_back(str.at(ii));
+    }
 
     return out;
 }
