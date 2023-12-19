@@ -19,7 +19,6 @@
 
 namespace module {
 namespace utils {
-
 /// @brief The type of the modbus register.
 enum class RegisterType {
     HOLDING = 3,
@@ -61,7 +60,6 @@ protected:
     virtual types::powermeter::TransactionStartResponse
     handle_start_transaction(types::powermeter::TransactionReq& value) override;
     virtual types::powermeter::TransactionStopResponse handle_stop_transaction(std::string& transaction_id) override;
-
     // ev@d2d1847a-7b88-41dd-ad07-92785f06f5c4:v1
     // insert your protected definitions here
     // ev@d2d1847a-7b88-41dd-ad07-92785f06f5c4:v1
@@ -69,6 +67,8 @@ protected:
 private:
     const Everest::PtrContainer<PowermeterBSM_WS36A>& mod;
     const Conf& config;
+
+    inline static const std::string PUBLIC_KEY_HEADER = "3059301306072A8648CE3D020106082A8648CE3D03010703420004";
 
     virtual void init() override;
     virtual void ready() override;
