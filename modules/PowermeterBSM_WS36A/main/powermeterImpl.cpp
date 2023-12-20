@@ -103,7 +103,6 @@ void powermeterImpl::ready() {
     const auto public_key_length = read_register<uint16_t>(PUBLIC_KEY_LEN);
     uint32_t reg_num = ceil(public_key_length / 2);
     const auto str = read_register<std::string>(module::utils::Register{PUBLIC_KEY.start_register, reg_num});
-    // Convert each int32_t value to hexadecimal and concatenate into a single hex string
     this->publish_public_key(this->PUBLIC_KEY_HEADER + to_hex(str).substr(0, public_key_length));
 }
 
