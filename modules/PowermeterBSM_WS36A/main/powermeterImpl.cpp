@@ -93,8 +93,7 @@ void powermeterImpl::ready() {
     uint32_t reg_num = ceil(public_key_length / 2);
     const auto public_key_ending =
         read_register<std::string>(module::utils::Register{PUBLIC_KEY.start_register, reg_num});
-
-    this->publish_public_key(public_key_ending.substr(0, public_key_length));
+    this->publish_public_key(this->PUBLIC_KEY_HEADER + public_key_ending.substr(0, public_key_length));
 }
 
 TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const TransactionReq& value) {
