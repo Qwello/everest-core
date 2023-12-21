@@ -103,11 +103,12 @@ void powermeterImpl::ready() {
     EVLOG_info << "Reading public key";
     const auto public_key_length = read_register<uint16_t>(PUBLIC_KEY_LEN);
     EVLOG_info << "Length of public key in bytes: " << public_key_length;
-    uint32_t reg_num = ceil(public_key_length / 2);
+    uint32_t reg_num = ceil((public_key_length + 1) / 2);
     EVLOG_info << "Length of public key in registers: " << reg_num;
-    const auto str = read_register<std::string>(module::utils::Register{PUBLIC_KEY.start_register, reg_num});
-    EVLOG_info << "Publishing the public key: " << this->PUBLIC_KEY_HEADER + to_hex(str).substr(0, public_key_length);
-    this->publish_public_key(this->PUBLIC_KEY_HEADER + to_hex(str).substr(0, public_key_length));
+    const auto str = to_hex(read_register<std::string>(module::utils::Register{PUBLIC_KEY.start_register, reg_num})
+                                .substr(0, public_key_length));
+    EVLOG_info << "Publishing the public key: " << this->PUBLIC_KEY_HEADER + to_hex(str);
+    this->publish_public_key(this->PUBLIC_KEY_HEADER + to_hex(str));
 }
 
 TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const TransactionReq& value) {
