@@ -103,7 +103,7 @@ void powermeterImpl::ready() {
     EVLOG_info << "Reading public key";
     const auto public_key_length = read_register<uint16_t>(PUBLIC_KEY_LEN);
     EVLOG_info << "Length of public key in bytes: " << public_key_length;
-    uint32_t reg_num = ceil((public_key_length + 1) / 2);
+    uint32_t reg_num = (public_key_length + 1) / 2;
     EVLOG_info << "Length of public key in registers: " << reg_num;
     const auto str = to_hex(read_register<std::string>(module::utils::Register{PUBLIC_KEY.start_register, reg_num})
                                 .substr(0, public_key_length));
