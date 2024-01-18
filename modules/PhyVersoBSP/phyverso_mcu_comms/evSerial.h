@@ -9,7 +9,68 @@
 #include <sigslot/signal.hpp>
 #include <stdint.h>
 #include <termios.h>
+#include <unordered_map>
 #include <utils/thread.hpp>
+
+#include <iostream>
+
+/// @brief Struct to handle the PSensors.
+///
+/// The data from the PSensor comes as chunks over the wire. This class collects
+/// the data and returns a full message once all chunk have arrived.
+struct PSensorHandler {
+
+    PSensorHandler(const PSensorData& chunk) :
+        message_id{chunk.id}, chunks_total{chunk.chunks_total}, chunk_current{0} {
+
+        data.reserve(chunks_total * NUM_ELEMENTS);
+        insert(chunk);
+    }
+
+    /// @brief Insert the new chunk.
+    /// @throw std::runtime_error, if the argument is not sound.
+    void insert(const PSensorData& chunk) {
+        // Check the input criteria.
+        if (chunk.id != message_id || chunk.chunks_total != chunks_total || chunk.chunk_current != chunk_current ||
+            chunk.chunk_current >= chunk.chunks_total)
+            throw std::runtime_error("Invalid input");
+
+        ++chunk_current;
+        data.insert(data.end(), std::begin(chunk.data), std::begin(chunk.data) + chunk.data_count);
+
+        for(const auto& a : data)
+            std::cout << a << ",";
+        std::cout << std::endl;
+    }
+
+    /// @brief Returns true if we have gathered all message chunks.
+    bool is_complete() const noexcept {
+        return chunk_current == chunks_total;
+    }
+
+    /// @brief Returns the data. After this call the instance can be destroyed.
+    /// @throw std::runtime_error, if the data is incomplete.
+    std::vector<uint16_t>&& get_data() {
+        if (!is_complete())
+            throw std::runtime_error("Incomplete data");
+        return std::move(data);
+    }
+
+private:
+    static constexpr size_t NUM_ELEMENTS = sizeof(PSensorData::data) / sizeof(&PSensorData::data);
+
+    /// @brief The message id - we use this to identify chunks of our data.
+    const unsigned message_id;
+
+    /// @brief The number of total chunks. This let us know when we're done.
+    const unsigned chunks_total;
+
+    /// @brief The expected chunk.
+    int chunk_current;
+
+    /// @brief The data.
+    std::vector<uint16_t> data;
+};
 
 class evSerial {
 
@@ -41,6 +102,7 @@ public:
     sigslot::signal<int, PpState> signal_pp_state;
     sigslot::signal<FanState> signal_fan_state;
     sigslot::signal<int, LockState> signal_lock_state;
+    sigslot::signal<int, const std::vector<uint16_t>&> signal_psensor_data;
 
 private:
     // Serial interface
@@ -67,6 +129,8 @@ private:
     bool link_write(EverestToMcu* m);
     std::atomic_bool reset_done_flag;
     std::atomic_bool forced_reset;
+    /// @brief Maps the connectors to PSensorHandlers.
+    std::unordered_map<unsigned, PSensorHandler> psensor_handlers;
 
     bool serial_timed_out();
     void timeout_detection_thread();

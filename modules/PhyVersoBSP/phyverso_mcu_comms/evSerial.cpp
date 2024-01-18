@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -85,11 +86,11 @@ bool evSerial::set_serial_attributes() {
     // disable IGNBRK for mismatched speed tests; otherwise receive break
     // as \000 chars
     tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON | IXOFF | IXANY);
-    tty.c_lflag = 0;                   // no signaling chars, no echo,
-                                       // no canonical processing
-    tty.c_oflag = 0;                   // no remapping, no delays
-    tty.c_cc[VMIN] = 0;                // read blocks
-    tty.c_cc[VTIME] = 5;               // 0.5 seconds read timeout
+    tty.c_lflag = 0;     // no signaling chars, no echo,
+                         // no canonical processing
+    tty.c_oflag = 0;     // no remapping, no delays
+    tty.c_cc[VMIN] = 0;  // read blocks
+    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
 
     tty.c_cflag |= (CLOCAL | CREAD);   // ignore modem controls,
                                        // enable reading
@@ -139,9 +140,11 @@ void evSerial::handle_packet(uint8_t* buf, int len) {
     len -= 4;
 
     McuToEverest msg_in;
+    PSensorData psensor_data_in = PSensorData_init_default;
+    psensor_data_in.data_count = 64;
     pb_istream_t istream = pb_istream_from_buffer(buf, len);
 
-    if (pb_decode(&istream, McuToEverest_fields, &msg_in))
+    if (pb_decode(&istream, McuToEverest_fields, &msg_in)) {
         switch (msg_in.which_payload) {
 
         case McuToEverest_keep_alive_tag:
@@ -182,6 +185,40 @@ void evSerial::handle_packet(uint8_t* buf, int len) {
             signal_lock_state(msg_in.connector, msg_in.payload.lock_state);
             break;
         }
+    } else if (pb_decode(&istream, PSensorData_fields, &psensor_data_in)) {
+        EVLOG_info << "Received chunk " << psensor_data_in.id << " " << psensor_data_in.chunk_current << " " << psensor_data_in.data_count;
+
+        for(size_t ii = 0; ii != 10; ++ii)
+            EVLOG_info << (int)buf[ii];
+        auto iter = psensor_handlers.find(psensor_data_in.connector);
+        if (iter == psensor_handlers.end()) {
+            // The item does not exist - try to insert it.
+            try {
+                iter = psensor_handlers.emplace(psensor_data_in.connector, psensor_data_in).first;
+            } catch (...) {
+                // We can't do anything here - the chunk is ill formed and does
+                // not start with 0.
+                EVLOG_debug << "Stray chunk " << psensor_data_in.id << "; Ignoring";
+                return;
+            }
+        } else {
+            try {
+                iter->second.insert(psensor_data_in);
+            } catch (...) {
+                // We've failed to insert the data.. Drop the current buffer.
+                EVLOG_debug << "Stray chunk " << psensor_data_in.id << "; Resetting";
+                psensor_handlers.erase(iter);
+                return;
+            }
+        }
+        if (!iter->second.is_complete())
+            return;
+
+        const std::vector<uint16_t> data = iter->second.get_data();
+        EVLOG_info << "Received sensor data with the size " << data.size();
+        signal_psensor_data(iter->first, std::move(data));
+        psensor_handlers.erase(iter);
+    }
 }
 
 void evSerial::cobs_decode(uint8_t* buf, int len) {
