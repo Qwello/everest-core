@@ -12,6 +12,7 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <date/date.h>
 #include <date/tz.h>
@@ -138,75 +139,92 @@ void evSerial::handle_packet(uint8_t* buf, int len) {
     }
 
     len -= 4;
+    if (handle_McuToEverest(buf, len))
+        return;
+    else if (handle_PSensorData(buf, len))
+        return;
+}
 
+bool evSerial::handle_McuToEverest(const uint8_t* buf, const int len) {
     McuToEverest msg_in;
-    PSensorData psensor_data_in = PSensorData_init_default;
-    psensor_data_in.data_count = 64;
     pb_istream_t istream = pb_istream_from_buffer(buf, len);
 
-    if (pb_decode(&istream, McuToEverest_fields, &msg_in)) {
-        switch (msg_in.which_payload) {
+    if (!pb_decode(&istream, McuToEverest_fields, &msg_in))
+        return false;
 
-        case McuToEverest_keep_alive_tag:
-            signal_keep_alive(msg_in.payload.keep_alive);
-            break;
+    switch (msg_in.which_payload) {
 
-        case McuToEverest_cp_state_tag:
-            signal_cp_state(msg_in.connector, msg_in.payload.cp_state);
-            break;
+    case McuToEverest_keep_alive_tag:
+        signal_keep_alive(msg_in.payload.keep_alive);
+        break;
 
-        case McuToEverest_relais_state_tag:
-            signal_relais_state(msg_in.connector, msg_in.payload.relais_state);
-            break;
+    case McuToEverest_cp_state_tag:
+        signal_cp_state(msg_in.connector, msg_in.payload.cp_state);
+        break;
 
-        case McuToEverest_error_flags_tag:
-            signal_error_flags(msg_in.connector, msg_in.payload.error_flags);
-            break;
+    case McuToEverest_relais_state_tag:
+        signal_relais_state(msg_in.connector, msg_in.payload.relais_state);
+        break;
 
-        case McuToEverest_telemetry_tag:
-            signal_telemetry(msg_in.connector, msg_in.payload.telemetry);
-            break;
+    case McuToEverest_error_flags_tag:
+        signal_error_flags(msg_in.connector, msg_in.payload.error_flags);
+        break;
 
-        case McuToEverest_reset_tag:
-            reset_done_flag = true;
-            if (!forced_reset)
-                signal_spurious_reset(msg_in.payload.reset);
-            break;
+    case McuToEverest_telemetry_tag:
+        signal_telemetry(msg_in.connector, msg_in.payload.telemetry);
+        break;
 
-        case McuToEverest_pp_state_tag:
-            signal_pp_state(msg_in.connector, msg_in.payload.pp_state);
-            break;
+    case McuToEverest_reset_tag:
+        reset_done_flag = true;
+        if (!forced_reset)
+            signal_spurious_reset(msg_in.payload.reset);
+        break;
 
-        case McuToEverest_fan_state_tag:
-            signal_fan_state(msg_in.payload.fan_state);
-            break;
+    case McuToEverest_pp_state_tag:
+        signal_pp_state(msg_in.connector, msg_in.payload.pp_state);
+        break;
 
-        case McuToEverest_lock_state_tag:
-            signal_lock_state(msg_in.connector, msg_in.payload.lock_state);
-            break;
-        }
-    } else if (pb_decode(&istream, PSensorData_fields, &psensor_data_in)) {
-        EVLOG_info << "Received chunk " << psensor_data_in.id << " " << psensor_data_in.chunk_current << " " << psensor_data_in.data_count;
+    case McuToEverest_fan_state_tag:
+        signal_fan_state(msg_in.payload.fan_state);
+        break;
 
-        for(size_t ii = 0; ii != 10; ++ii)
-            EVLOG_info << (int)buf[ii];
-        auto iter = psensor_handlers.find(psensor_data_in.connector);
+    case McuToEverest_lock_state_tag:
+        signal_lock_state(msg_in.connector, msg_in.payload.lock_state);
+        break;
+    }
+
+    return true;
+}
+
+bool evSerial::handle_PSensorData(const uint8_t* buf, const int len) {
+    PSensorData data = PSensorData_init_default;
+    pb_istream_t istream = pb_istream_from_buffer(buf, len);
+
+    if (!pb_decode(&istream, PSensorData_fields, &data))
+        return false;
+
+    EVLOG_info << "Received chunk " << data.id << " " << data.chunks_total << " " << data.chunk_current << " " << data.data_count;
+
+    // Lambda for updating PSensorHandler - here just to simplify the return
+    // logic.
+    [this](const PSensorData& data) {
+        auto iter = psensor_handlers.find(data.connector);
         if (iter == psensor_handlers.end()) {
             // The item does not exist - try to insert it.
             try {
-                iter = psensor_handlers.emplace(psensor_data_in.connector, psensor_data_in).first;
+                iter = psensor_handlers.emplace(data.connector, data).first;
             } catch (...) {
                 // We can't do anything here - the chunk is ill formed and does
                 // not start with 0.
-                EVLOG_debug << "Stray chunk " << psensor_data_in.id << "; Ignoring";
+                EVLOG_debug << "Stray chunk " << data.id << "; Ignoring";
                 return;
             }
         } else {
             try {
-                iter->second.insert(psensor_data_in);
+                iter->second.insert(data);
             } catch (...) {
                 // We've failed to insert the data.. Drop the current buffer.
-                EVLOG_debug << "Stray chunk " << psensor_data_in.id << "; Resetting";
+                EVLOG_debug << "Stray chunk " << data.id << "; Resetting";
                 psensor_handlers.erase(iter);
                 return;
             }
@@ -214,11 +232,13 @@ void evSerial::handle_packet(uint8_t* buf, int len) {
         if (!iter->second.is_complete())
             return;
 
-        const std::vector<uint16_t> data = iter->second.get_data();
-        EVLOG_info << "Received sensor data with the size " << data.size();
-        signal_psensor_data(iter->first, std::move(data));
+        const std::vector<uint16_t> readings = iter->second.get_data();
+        EVLOG_info << "Received sensor data with the size " << readings.size();
+        signal_psensor_data(iter->first, std::move(readings));
         psensor_handlers.erase(iter);
-    }
+    }(data);
+
+    return true;
 }
 
 void evSerial::cobs_decode(uint8_t* buf, int len) {
@@ -261,6 +281,7 @@ void evSerial::cobs_decode_byte(uint8_t byte) {
         }
     }
     block--;
+    return;
 }
 
 void evSerial::run() {
@@ -286,8 +307,8 @@ void evSerial::readThread() {
     while (true) {
         if (read_thread_handle.shouldExit())
             break;
-        n = read(fd, buf, sizeof buf);
-        // printf ("read %u bytes.\n", n);
+        n = read(fd, buf, sizeof(buf));
+
         cobs_decode(buf, n);
     }
 }

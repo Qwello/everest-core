@@ -12,8 +12,6 @@
 #include <unordered_map>
 #include <utils/thread.hpp>
 
-#include <iostream>
-
 /// @brief Struct to handle the PSensors.
 ///
 /// The data from the PSensor comes as chunks over the wire. This class collects
@@ -31,16 +29,17 @@ struct PSensorHandler {
     /// @throw std::runtime_error, if the argument is not sound.
     void insert(const PSensorData& chunk) {
         // Check the input criteria.
-        if (chunk.id != message_id || chunk.chunks_total != chunks_total || chunk.chunk_current != chunk_current ||
-            chunk.chunk_current >= chunk.chunks_total)
+        if (chunk.id != message_id || chunk.chunks_total != chunks_total || chunk.chunk_current >= chunk.chunks_total)
+            throw std::runtime_error("Invalid input");
+
+        // Insert the missing segments.
+        if (chunk.chunk_current < chunk_current)
+            return;
+        else if (chunk.chunk_current > chunk_current)
             throw std::runtime_error("Invalid input");
 
         ++chunk_current;
         data.insert(data.end(), std::begin(chunk.data), std::begin(chunk.data) + chunk.data_count);
-
-        for(const auto& a : data)
-            std::cout << a << ",";
-        std::cout << std::endl;
     }
 
     /// @brief Returns true if we have gathered all message chunks.
@@ -113,6 +112,8 @@ private:
     // COBS de-/encoder
     void cobs_decode_reset();
     void handle_packet(uint8_t* buf, int len);
+    bool handle_McuToEverest(const uint8_t* buf, const int len);
+    bool handle_PSensorData(const uint8_t* buf, const int len);
     void cobs_decode(uint8_t* buf, int len);
     void cobs_decode_byte(uint8_t byte);
     size_t cobs_encode(const void* data, size_t length, uint8_t* buffer);
