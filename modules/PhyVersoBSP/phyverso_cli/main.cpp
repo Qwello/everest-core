@@ -7,8 +7,8 @@
 #include <unistd.h>
 
 #include "phyverso.pb.h"
-#include <sigslot/signal.hpp>
 #include <everest/logging.hpp>
+#include <sigslot/signal.hpp>
 
 std::atomic_bool sw_version_received = false;
 
@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
 
         p.signal_psensor_data.connect([](int connector, const std::vector<uint16_t>& data) {
             EVLOG_info << "Received data from " << connector;
-            for(const auto a : data)
+            for (const auto a : data)
                 EVLOG_info << a;
         });
 

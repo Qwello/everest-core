@@ -11,8 +11,8 @@
 #include <utility>
 
 #include <fcntl.h>
-#include <unistd.h>
 #include <iostream>
+#include <unistd.h>
 
 #include <date/date.h>
 #include <date/tz.h>
@@ -203,7 +203,8 @@ bool evSerial::handle_PSensorData(const uint8_t* buf, const int len) {
     if (!pb_decode(&istream, PSensorData_fields, &data))
         return false;
 
-    EVLOG_info << "Received chunk " << data.id << " " << data.chunks_total << " " << data.chunk_current << " " << data.data_count;
+    EVLOG_debug << "Received chunk " << data.id << " " << data.chunks_total << " " << data.chunk_current << " "
+                << data.data_count;
 
     // Lambda for updating PSensorHandler - here just to simplify the return
     // logic.
