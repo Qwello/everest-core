@@ -4,7 +4,7 @@
 #include "generic_arrayImpl.hpp"
 
 namespace module {
-namespace generic_array_2 {
+namespace system_specific_data_2 {
 
 void generic_arrayImpl::init() {
     mod->serial.signal_opaque_data.connect([this](int connector, const std::vector<int32_t>& data) {
@@ -18,5 +18,5 @@ void generic_arrayImpl::init() {
 void generic_arrayImpl::ready() {
 }
 
-} // namespace generic_array_2
+} // namespace system_specific_data_2
 } // namespace module

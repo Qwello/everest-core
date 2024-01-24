@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
-#ifndef GENERIC_ARRAY_1_GENERIC_ARRAY_IMPL_HPP
-#define GENERIC_ARRAY_1_GENERIC_ARRAY_IMPL_HPP
+#ifndef SYSTEM_SPECIFIC_DATA_1_GENERIC_ARRAY_IMPL_HPP
+#define SYSTEM_SPECIFIC_DATA_1_GENERIC_ARRAY_IMPL_HPP
 
 //
 // AUTO GENERATED - MARKED REGIONS WILL BE KEPT
@@ -17,7 +17,7 @@
 // ev@75ac1216-19eb-4182-a85c-820f1fc2c091:v1
 
 namespace module {
-namespace generic_array_1 {
+namespace system_specific_data_1 {
 
 struct Conf {};
 
@@ -25,7 +25,7 @@ class generic_arrayImpl : public generic_arrayImplBase {
 public:
     generic_arrayImpl() = delete;
     generic_arrayImpl(Everest::ModuleAdapter* ev, const Everest::PtrContainer<PhyVersoBSP>& mod, Conf& config) :
-        generic_arrayImplBase(ev, "generic_array_1"), mod(mod), config(config){};
+        generic_arrayImplBase(ev, "system_specific_data_1"), mod(mod), config(config){};
 
     // ev@8ea32d28-373f-4c90-ae5e-b4fcc74e2a61:v1
     // insert your public definitions here
@@ -54,7 +54,7 @@ private:
 // insert other definitions here
 // ev@3d7da0ad-02c2-493d-9920-0bbbd56b9876:v1
 
-} // namespace generic_array_1
+} // namespace system_specific_data_1
 } // namespace module
 
-#endif // GENERIC_ARRAY_1_GENERIC_ARRAY_IMPL_HPP
+#endif // SYSTEM_SPECIFIC_DATA_1_GENERIC_ARRAY_IMPL_HPP
