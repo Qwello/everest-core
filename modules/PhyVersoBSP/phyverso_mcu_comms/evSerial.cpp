@@ -234,8 +234,8 @@ bool evSerial::handle_OpaqueData(const uint8_t* buf, const int len) {
             return;
 
         const auto readings = iter->second.get_data();
-        EVLOG_info << "Received sensor data with the size " << readings.size();
-        signal_opaque_data(iter->first, std::move(readings));
+        EVLOG_debug << "Received sensor data with the size " << readings.size();
+        signal_opaque_data(iter->first, readings);
         psensor_handlers.erase(iter);
     }(data);
 

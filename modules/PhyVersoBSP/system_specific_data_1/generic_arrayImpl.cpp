@@ -12,7 +12,7 @@ void generic_arrayImpl::init() {
             return;
         EVLOG_info << "Received data from " << connector;
         publish_vector_of_ints({data});
-    });    
+    });
 }
 
 void generic_arrayImpl::ready() {
