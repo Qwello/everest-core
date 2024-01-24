@@ -24,7 +24,7 @@ PB_BIND(Telemetry, Telemetry, AUTO)
 PB_BIND(FanState, FanState, AUTO)
 
 
-PB_BIND(PSensorData, PSensorData, AUTO)
+PB_BIND(OpaqueData, OpaqueData, AUTO)
 
 
 

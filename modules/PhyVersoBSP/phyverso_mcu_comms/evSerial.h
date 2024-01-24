@@ -7,18 +7,19 @@
 #include <date/date.h>
 #include <date/tz.h>
 #include <sigslot/signal.hpp>
+#include <stdexcept>
 #include <stdint.h>
 #include <termios.h>
 #include <unordered_map>
+#include <utility>
 #include <utils/thread.hpp>
+#include <vector>
 
-/// @brief Struct to handle the PSensors.
-///
-/// The data from the PSensor comes as chunks over the wire. This class collects
-/// the data and returns a full message once all chunk have arrived.
-struct PSensorHandler {
+/// @brief Struct to handle the OpaqueData chunks.
+/// This class re-assembles the full data from the chunks.
+struct OpaqueDataHandler {
 
-    PSensorHandler(const PSensorData& chunk) :
+    OpaqueDataHandler(const OpaqueData& chunk) :
         message_id{chunk.id}, chunks_total{chunk.chunks_total}, chunk_current{0} {
 
         data.reserve(chunks_total * NUM_ELEMENTS);
@@ -27,7 +28,7 @@ struct PSensorHandler {
 
     /// @brief Insert the new chunk.
     /// @throw std::runtime_error, if the argument is not sound.
-    void insert(const PSensorData& chunk) {
+    void insert(const OpaqueData& chunk) {
         // Check the input criteria.
         if (chunk.id != message_id || chunk.chunks_total != chunks_total || chunk.chunk_current >= chunk.chunks_total)
             throw std::runtime_error("Invalid input");
@@ -49,14 +50,16 @@ struct PSensorHandler {
 
     /// @brief Returns the data. After this call the instance can be destroyed.
     /// @throw std::runtime_error, if the data is incomplete.
-    std::vector<uint16_t>&& get_data() {
+    std::vector<int32_t> get_data() {
         if (!is_complete())
             throw std::runtime_error("Incomplete data");
-        return std::move(data);
+        std::vector<int32_t> out(std::move(data));
+        data.clear();
+        return out;
     }
 
 private:
-    static constexpr size_t NUM_ELEMENTS = sizeof(PSensorData::data) / sizeof(&PSensorData::data);
+    static constexpr size_t NUM_ELEMENTS = sizeof(OpaqueData::data) / sizeof(&OpaqueData::data);
 
     /// @brief The message id - we use this to identify chunks of our data.
     const unsigned message_id;
@@ -68,7 +71,7 @@ private:
     int chunk_current;
 
     /// @brief The data.
-    std::vector<uint16_t> data;
+    std::vector<int32_t> data;
 };
 
 class evSerial {
@@ -101,7 +104,7 @@ public:
     sigslot::signal<int, PpState> signal_pp_state;
     sigslot::signal<FanState> signal_fan_state;
     sigslot::signal<int, LockState> signal_lock_state;
-    sigslot::signal<int, const std::vector<uint16_t>&> signal_psensor_data;
+    sigslot::signal<int, const std::vector<int32_t>&> signal_opaque_data;
 
 private:
     // Serial interface
@@ -113,7 +116,7 @@ private:
     void cobs_decode_reset();
     void handle_packet(uint8_t* buf, int len);
     bool handle_McuToEverest(const uint8_t* buf, const int len);
-    bool handle_PSensorData(const uint8_t* buf, const int len);
+    bool handle_OpaqueData(const uint8_t* buf, const int len);
     void cobs_decode(uint8_t* buf, int len);
     void cobs_decode_byte(uint8_t byte);
     size_t cobs_encode(const void* data, size_t length, uint8_t* buffer);
@@ -130,8 +133,8 @@ private:
     bool link_write(EverestToMcu* m);
     std::atomic_bool reset_done_flag;
     std::atomic_bool forced_reset;
-    /// @brief Maps the connectors to PSensorHandlers.
-    std::unordered_map<unsigned, PSensorHandler> psensor_handlers;
+    /// @brief Maps the connectors to OpaqueDataHandlers.
+    std::unordered_map<unsigned, OpaqueDataHandler> psensor_handlers;
 
     bool serial_timed_out();
     void timeout_detection_thread();

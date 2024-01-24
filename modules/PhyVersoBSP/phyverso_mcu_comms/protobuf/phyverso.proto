@@ -91,7 +91,7 @@ enum LockState {
 }
 
 // Message for parking sensor data.
-message PSensorData {
+message OpaqueData {
   // The data itself.
   repeated uint32 data = 1;
 

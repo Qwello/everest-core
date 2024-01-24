@@ -141,7 +141,7 @@ void evSerial::handle_packet(uint8_t* buf, int len) {
     len -= 4;
     if (handle_McuToEverest(buf, len))
         return;
-    else if (handle_PSensorData(buf, len))
+    else if (handle_OpaqueData(buf, len))
         return;
 }
 
@@ -196,19 +196,19 @@ bool evSerial::handle_McuToEverest(const uint8_t* buf, const int len) {
     return true;
 }
 
-bool evSerial::handle_PSensorData(const uint8_t* buf, const int len) {
-    PSensorData data = PSensorData_init_default;
+bool evSerial::handle_OpaqueData(const uint8_t* buf, const int len) {
+    OpaqueData data = OpaqueData_init_default;
     pb_istream_t istream = pb_istream_from_buffer(buf, len);
 
-    if (!pb_decode(&istream, PSensorData_fields, &data))
+    if (!pb_decode(&istream, OpaqueData_fields, &data))
         return false;
 
     EVLOG_debug << "Received chunk " << data.id << " " << data.chunks_total << " " << data.chunk_current << " "
                 << data.data_count;
 
-    // Lambda for updating PSensorHandler - here just to simplify the return
+    // Lambda for updating OpaqueDataHandler - here just to simplify the return
     // logic.
-    [this](const PSensorData& data) {
+    [this](const OpaqueData& data) {
         auto iter = psensor_handlers.find(data.connector);
         if (iter == psensor_handlers.end()) {
             // The item does not exist - try to insert it.
@@ -233,9 +233,9 @@ bool evSerial::handle_PSensorData(const uint8_t* buf, const int len) {
         if (!iter->second.is_complete())
             return;
 
-        const std::vector<uint16_t> readings = iter->second.get_data();
+        const auto readings = iter->second.get_data();
         EVLOG_info << "Received sensor data with the size " << readings.size();
-        signal_psensor_data(iter->first, std::move(readings));
+        signal_opaque_data(iter->first, std::move(readings));
         psensor_handlers.erase(iter);
     }(data);
 
