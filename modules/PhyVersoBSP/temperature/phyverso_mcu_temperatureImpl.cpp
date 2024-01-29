@@ -2,7 +2,6 @@
 // Copyright Pionix GmbH and Contributors to EVerest
 
 #include "phyverso_mcu_temperatureImpl.hpp"
-#include <generated/types/temperature.hpp>
 
 namespace module {
 namespace temperature {
