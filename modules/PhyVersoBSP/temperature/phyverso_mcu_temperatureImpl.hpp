@@ -24,7 +24,8 @@ struct Conf {};
 class phyverso_mcu_temperatureImpl : public phyverso_mcu_temperatureImplBase {
 public:
     phyverso_mcu_temperatureImpl() = delete;
-    phyverso_mcu_temperatureImpl(Everest::ModuleAdapter* ev, const Everest::PtrContainer<PhyVersoBSP>& mod, Conf& config) :
+    phyverso_mcu_temperatureImpl(Everest::ModuleAdapter* ev, const Everest::PtrContainer<PhyVersoBSP>& mod,
+                                 Conf& config) :
         phyverso_mcu_temperatureImplBase(ev, "phyverso_mcu_temperature"), mod(mod), config(config){};
 
     // ev@8ea32d28-373f-4c90-ae5e-b4fcc74e2a61:v1
