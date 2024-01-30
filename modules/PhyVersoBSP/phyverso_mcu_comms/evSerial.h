@@ -105,7 +105,7 @@ public:
     sigslot::signal<FanState> signal_fan_state;
     sigslot::signal<int, LockState> signal_lock_state;
     sigslot::signal<Temperature> signal_temperature;
-    sigslot::signal<int, const std::vector<int32_t>&> signal_opaque_data;
+    sigslot::signal<int, std::vector<int32_t>> signal_opaque_data;
 
 private:
     // Serial interface

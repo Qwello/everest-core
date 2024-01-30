@@ -7,7 +7,8 @@ namespace module {
 namespace system_specific_data_1 {
 
 void generic_arrayImpl::init() {
-    mod->serial.signal_opaque_data.connect([this](int connector, const std::vector<int32_t>& data) {
+    mod->serial.signal_opaque_data.connect([this](int connector, std::vector<int32_t> data) {
+        EVLOG_info << "Received data from " << connector;
         if (connector != 1)
             return;
         EVLOG_info << "Received data from " << connector;
