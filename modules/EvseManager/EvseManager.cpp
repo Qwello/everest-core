@@ -44,30 +44,30 @@ void EvseManager::init() {
     invoke_init(*p_token_provider);
 
     // check if a slac module is connected to the optional requirement
-    slac_enabled = !r_slac.empty();
+    slac_enabled = not r_slac.empty();
 
     // if hlc is disabled in config, disable slac even if requirement is connected
-    if (!(config.ac_hlc_enabled || config.ac_with_soc || config.charge_mode == "DC")) {
+    if (not(config.ac_hlc_enabled or config.ac_with_soc or config.charge_mode == "DC")) {
         slac_enabled = false;
     }
 
     // Use SLAC MAC address for Autocharge if configured.
-    if (config.autocharge_use_slac_instead_of_hlc && slac_enabled) {
+    if (config.autocharge_use_slac_instead_of_hlc and slac_enabled) {
         r_slac[0]->subscribe_ev_mac_address([this](const std::string& token) {
             p_token_provider->publish_provided_token(create_autocharge_token(token, config.connector_id));
         });
     }
 
-    hlc_enabled = !r_hlc.empty();
-    if (!slac_enabled)
+    hlc_enabled = not r_hlc.empty();
+    if (not slac_enabled)
         hlc_enabled = false;
 
-    if (config.charge_mode == "DC" && (!hlc_enabled || !slac_enabled || r_powersupply_DC.empty())) {
+    if (config.charge_mode == "DC" and (not hlc_enabled or not slac_enabled or r_powersupply_DC.empty())) {
         EVLOG_error << "DC mode requires slac, HLC and powersupply DCDC to be connected";
         exit(255);
     }
 
-    if (config.charge_mode == "DC" && r_imd.empty()) {
+    if (config.charge_mode == "DC" and r_imd.empty()) {
         EVLOG_warning << "DC mode without isolation monitoring configured, please check your national regulations.";
     }
 
@@ -146,9 +146,9 @@ void EvseManager::ready() {
         });
 
         // Trigger SLAC restart
-        charger->signal_SLAC_start.connect([this] { r_slac[0]->call_enter_bcd(); });
+        charger->signal_slac_start.connect([this] { r_slac[0]->call_enter_bcd(); });
         // Trigger SLAC reset
-        charger->signal_SLAC_reset.connect([this] { r_slac[0]->call_reset(false); });
+        charger->signal_slac_reset.connect([this] { r_slac[0]->call_reset(false); });
 
         // Ask HLC to stop charging session
         charger->signal_hlc_stop_charging.connect([this] { r_hlc[0]->call_stop_charging(true); });
@@ -203,7 +203,7 @@ void EvseManager::ready() {
 
             // Notification that current demand has started
             r_hlc[0]->subscribe_currentDemand_Started([this] {
-                charger->notifyCurrentDemandStarted();
+                charger->notify_currentdemand_started();
                 current_demand_active = true;
             });
 
@@ -213,7 +213,7 @@ void EvseManager::ready() {
             });
 
             // Isolation monitoring for DC charging handler
-            if (!r_imd.empty()) {
+            if (not r_imd.empty()) {
 
                 imd_stop();
 
@@ -225,7 +225,7 @@ void EvseManager::ready() {
             }
 
             // Get voltage/current from DC power supply
-            if (!r_powersupply_DC.empty()) {
+            if (not r_powersupply_DC.empty()) {
                 r_powersupply_DC[0]->subscribe_voltage_current([this](types::power_supply_DC::VoltageCurrent m) {
                     powersupply_measurement = m;
                     types::iso15118_charger::DC_EVSEPresentVoltage_Current present_values;
@@ -241,7 +241,7 @@ void EvseManager::ready() {
                             present_values.EVSEPresentCurrent.value() + config.hack_present_current_offset;
                     }
 
-                    if (config.hack_pause_imd_during_precharge && m.voltage_V * m.current_A > 1000) {
+                    if (config.hack_pause_imd_during_precharge and m.voltage_V * m.current_A > 1000) {
                         // Start IMD again as it was stopped after CableCheck
                         imd_start();
                         EVLOG_info << "Hack: Restarting Isolation Measurement at " << m.voltage_V << " " << m.current_A;
@@ -265,10 +265,11 @@ void EvseManager::ready() {
                 bool target_changed = false;
 
                 // Hack for Skoda Enyaq that should be fixed in a different way
-                if (config.hack_skoda_enyaq && (v.DC_EVTargetVoltage < 300 || v.DC_EVTargetCurrent < 0))
+                if (config.hack_skoda_enyaq and (v.DC_EVTargetVoltage < 300 or v.DC_EVTargetCurrent < 0))
                     return;
 
-                if (v.DC_EVTargetVoltage != latest_target_voltage || v.DC_EVTargetCurrent != latest_target_current) {
+                if (v.DC_EVTargetVoltage not_eq latest_target_voltage or
+                    v.DC_EVTargetCurrent not_eq latest_target_current) {
                     latest_target_voltage = v.DC_EVTargetVoltage;
                     latest_target_current = v.DC_EVTargetCurrent;
                     target_changed = true;
@@ -276,7 +277,7 @@ void EvseManager::ready() {
 
                 if (target_changed) {
                     apply_new_target_voltage_current();
-                    if (!contactor_open) {
+                    if (not contactor_open) {
                         powersupply_DC_on();
                     }
 
@@ -298,7 +299,7 @@ void EvseManager::ready() {
 
             // Back up switch off - charger signalled that it needs to switch off now.
             // During normal operation this should be done earlier before switching off relais by HLC protocol.
-            charger->signal_DC_supply_off.connect([this] {
+            charger->signal_dc_supply_off.connect([this] {
                 powersupply_DC_off();
                 imd_stop();
             });
@@ -437,8 +438,8 @@ void EvseManager::ready() {
         // implement Auth handlers
         r_hlc[0]->subscribe_Require_Auth_EIM([this]() {
             //  Do we have auth already (i.e. delayed HLC after charging already running)?
-            if ((config.dbg_hlc_auth_after_tstep && charger->Authorized_EIM_ready_for_HLC()) ||
-                (!config.dbg_hlc_auth_after_tstep && charger->Authorized_EIM())) {
+            if ((config.dbg_hlc_auth_after_tstep and charger->get_authorized_eim_ready_for_hlc()) or
+                (not config.dbg_hlc_auth_after_tstep and charger->get_authorized_eim())) {
                 {
                     std::scoped_lock lock(hlc_mutex);
                     hlc_waiting_for_auth_eim = false;
@@ -454,7 +455,7 @@ void EvseManager::ready() {
             }
         });
 
-        if (!config.autocharge_use_slac_instead_of_hlc) {
+        if (not config.autocharge_use_slac_instead_of_hlc) {
             r_hlc[0]->subscribe_EVCCIDD([this](const std::string& token) {
                 autocharge_token = create_autocharge_token(token, config.connector_id);
                 car_manufacturer = get_manufacturer_from_mac(token);
@@ -474,7 +475,7 @@ void EvseManager::ready() {
             std::vector<int> referenced_connectors = {this->config.connector_id};
             _token.connectors.emplace(referenced_connectors);
             p_token_provider->publish_provided_token(_token);
-            if (charger->Authorized_PnC()) {
+            if (charger->get_authorized_pnc()) {
                 {
                     std::scoped_lock lock(hlc_mutex);
                     hlc_waiting_for_auth_eim = false;
@@ -507,7 +508,7 @@ void EvseManager::ready() {
                 }
             });
 
-            charger->signalACWithSoCTimeout.connect([this]() { switch_DC_mode(); });
+            charger->signal_ac_with_soc_timeout.connect([this]() { switch_DC_mode(); });
 
             r_hlc[0]->subscribe_DC_EVStatus([this](types::iso15118_charger::DC_EVStatusType status) {
                 EVLOG_info << fmt::format("SoC received: {}.", status.DC_EVRESSSOC);
@@ -534,7 +535,7 @@ void EvseManager::ready() {
     }
 
     // Maybe limit to single phase by user setting if possible with HW
-    if (!config.three_phases && hw_capabilities.min_phase_count_import == 1) {
+    if (not config.three_phases and hw_capabilities.min_phase_count_import == 1) {
         hw_capabilities.max_phase_count_import = 1;
         local_three_phases = false;
     } else if (hw_capabilities.max_phase_count_import == 3) {
@@ -572,7 +573,7 @@ void EvseManager::ready() {
             }
         }
 
-        charger->processEvent(event);
+        charger->process_event(event);
 
         // Forward some events to HLC
         if (get_hlc_enabled()) {
@@ -604,7 +605,7 @@ void EvseManager::ready() {
         }
 
         if (config.ac_with_soc)
-            charger->signalACWithSoCTimeout.connect([this]() {
+            charger->signal_ac_with_soc_timeout.connect([this]() {
                 EVLOG_info << "AC with SoC timeout";
                 switch_DC_mode();
             });
@@ -615,9 +616,9 @@ void EvseManager::ready() {
     if (r_powermeter_billing().size() > 0) {
         r_powermeter_billing()[0]->subscribe_powermeter([this](types::powermeter::Powermeter p) {
             // Inform charger about current charging current. This is used for slow OC detection.
-            if (p.current_A && p.current_A.value().L1 && p.current_A.value().L2 && p.current_A.value().L3) {
-                charger->setCurrentDrawnByVehicle(p.current_A.value().L1.value(), p.current_A.value().L2.value(),
-                                                  p.current_A.value().L3.value());
+            if (p.current_A and p.current_A.value().L1 and p.current_A.value().L2 and p.current_A.value().L3) {
+                charger->set_current_drawn_by_vehicle(p.current_A.value().L1.value(), p.current_A.value().L2.value(),
+                                                      p.current_A.value().L3.value());
             }
 
             // Inform HLC about the power meter data
@@ -659,15 +660,15 @@ void EvseManager::ready() {
             session_log.evse(true, fmt::format("SLAC {}", s));
             // Notify charger whether matching was started (or is done) or not
             if (s == "UNMATCHED") {
-                charger->setMatchingStarted(false);
+                charger->set_matching_started(false);
             } else {
-                charger->setMatchingStarted(true);
+                charger->set_matching_started(true);
             }
         });
 
         r_slac[0]->subscribe_request_error_routine([this]() {
             EVLOG_info << "Received request error routine from SLAC in evsemanager\n";
-            charger->requestErrorSequence();
+            charger->request_error_sequence();
         });
 
         r_slac[0]->subscribe_dlink_ready([this](const bool value) {
@@ -678,20 +679,20 @@ void EvseManager::ready() {
         });
     }
 
-    charger->signalMaxCurrent.connect([this](float ampere) {
+    charger->signal_max_current.connect([this](float ampere) {
         // The charger changed the max current setting. Forward to HLC
         if (get_hlc_enabled()) {
             r_hlc[0]->call_update_ac_max_current(ampere);
         }
     });
 
-    charger->signalEvent.connect([this](types::evse_manager::SessionEventEnum s) {
+    charger->signal_event.connect([this](types::evse_manager::SessionEventEnum s) {
         // Cancel reservations if charger is disabled or faulted
-        if (s == types::evse_manager::SessionEventEnum::Disabled ||
+        if (s == types::evse_manager::SessionEventEnum::Disabled or
             s == types::evse_manager::SessionEventEnum::PermanentFault) {
             cancel_reservation(true);
         }
-        if (s == types::evse_manager::SessionEventEnum::SessionStarted ||
+        if (s == types::evse_manager::SessionEventEnum::SessionStarted or
             s == types::evse_manager::SessionEventEnum::SessionFinished) {
             // Reset EV information on Session start and end
             ev_info = types::evse_manager::EVInfo();
@@ -700,13 +701,13 @@ void EvseManager::ready() {
 
         std::vector<types::iso15118_charger::PaymentOption> payment_options;
 
-        if (get_hlc_enabled() && s == types::evse_manager::SessionEventEnum::SessionStarted &&
-            charger->getSessionStartedReason() == types::evse_manager::StartSessionReason::Authorized) {
+        if (get_hlc_enabled() and s == types::evse_manager::SessionEventEnum::SessionStarted and
+            charger->get_session_started_reason() == types::evse_manager::StartSessionReason::Authorized) {
 
             payment_options.push_back(types::iso15118_charger::PaymentOption::ExternalPayment);
             r_hlc[0]->call_session_setup(payment_options, false);
 
-        } else if (get_hlc_enabled() && s == types::evse_manager::SessionEventEnum::SessionFinished) {
+        } else if (get_hlc_enabled() and s == types::evse_manager::SessionEventEnum::SessionFinished) {
             if (config.payment_enable_eim) {
                 payment_options.push_back(types::iso15118_charger::PaymentOption::ExternalPayment);
             }
@@ -730,7 +731,7 @@ void EvseManager::ready() {
     }
 
     telemetryThreadHandle = std::thread([this]() {
-        while (!telemetryThreadHandle.shouldExit()) {
+        while (not telemetryThreadHandle.shouldExit()) {
             sleep(10);
             auto p = get_latest_powermeter_data_billing();
             Everest::TelemetryMap telemetry_data{{"timestamp", p.timestamp},
@@ -751,75 +752,75 @@ void EvseManager::ready() {
             if (p.energy_Wh_export) {
                 telemetry_data["energy_export_total_Wh"] = p.energy_Wh_export.value().total;
             }
-            if (p.energy_Wh_export && p.energy_Wh_export.value().L1) {
+            if (p.energy_Wh_export and p.energy_Wh_export.value().L1) {
                 telemetry_data["energy_export_L1_Wh"] = p.energy_Wh_export.value().L1.value();
             }
-            if (p.energy_Wh_export && p.energy_Wh_export.value().L2) {
+            if (p.energy_Wh_export and p.energy_Wh_export.value().L2) {
                 telemetry_data["energy_export_L2_Wh"] = p.energy_Wh_export.value().L2.value();
             }
-            if (p.energy_Wh_export && p.energy_Wh_export.value().L3) {
+            if (p.energy_Wh_export and p.energy_Wh_export.value().L3) {
                 telemetry_data["energy_export_L3_Wh"] = p.energy_Wh_export.value().L3.value();
             }
 
             if (p.power_W) {
                 telemetry_data["power_total_W"] = p.power_W.value().total;
             }
-            if (p.power_W && p.power_W.value().L1) {
+            if (p.power_W and p.power_W.value().L1) {
                 telemetry_data["power_L1_W"] = p.power_W.value().L1.value();
             }
-            if (p.power_W && p.power_W.value().L2) {
+            if (p.power_W and p.power_W.value().L2) {
                 telemetry_data["power_L3_W"] = p.power_W.value().L2.value();
             }
-            if (p.power_W && p.power_W.value().L3) {
+            if (p.power_W and p.power_W.value().L3) {
                 telemetry_data["power_L3_W"] = p.power_W.value().L3.value();
             }
 
             if (p.VAR) {
                 telemetry_data["var_total"] = p.VAR.value().total;
             }
-            if (p.VAR && p.VAR.value().L1) {
+            if (p.VAR and p.VAR.value().L1) {
                 telemetry_data["var_L1"] = p.VAR.value().L1.value();
             }
-            if (p.VAR && p.VAR.value().L2) {
+            if (p.VAR and p.VAR.value().L2) {
                 telemetry_data["var_L1"] = p.VAR.value().L2.value();
             }
-            if (p.VAR && p.VAR.value().L3) {
+            if (p.VAR and p.VAR.value().L3) {
                 telemetry_data["var_L1"] = p.VAR.value().L3.value();
             }
 
-            if (p.voltage_V && p.voltage_V.value().L1) {
+            if (p.voltage_V and p.voltage_V.value().L1) {
                 telemetry_data["voltage_L1_V"] = p.voltage_V.value().L1.value();
             }
-            if (p.voltage_V && p.voltage_V.value().L2) {
+            if (p.voltage_V and p.voltage_V.value().L2) {
                 telemetry_data["voltage_L2_V"] = p.voltage_V.value().L2.value();
             }
-            if (p.voltage_V && p.voltage_V.value().L3) {
+            if (p.voltage_V and p.voltage_V.value().L3) {
                 telemetry_data["voltage_L3_V"] = p.voltage_V.value().L3.value();
             }
-            if (p.voltage_V && p.voltage_V.value().DC) {
+            if (p.voltage_V and p.voltage_V.value().DC) {
                 telemetry_data["voltage_DC_V"] = p.voltage_V.value().DC.value();
             }
 
-            if (p.current_A && p.current_A.value().L1) {
+            if (p.current_A and p.current_A.value().L1) {
                 telemetry_data["current_L1_A"] = p.current_A.value().L1.value();
             }
-            if (p.current_A && p.current_A.value().L2) {
+            if (p.current_A and p.current_A.value().L2) {
                 telemetry_data["current_L2_A"] = p.current_A.value().L2.value();
             }
-            if (p.current_A && p.current_A.value().L3) {
+            if (p.current_A and p.current_A.value().L3) {
                 telemetry_data["current_L3_A"] = p.current_A.value().L3.value();
             }
-            if (p.current_A && p.current_A.value().DC) {
+            if (p.current_A and p.current_A.value().DC) {
                 telemetry_data["current_DC_A"] = p.current_A.value().DC.value();
             }
 
             if (p.frequency_Hz) {
                 telemetry_data["frequency_L1_Hz"] = p.frequency_Hz.value().L1;
             }
-            if (p.frequency_Hz && p.frequency_Hz.value().L2) {
+            if (p.frequency_Hz and p.frequency_Hz.value().L2) {
                 telemetry_data["frequency_L2_Hz"] = p.frequency_Hz.value().L2.value();
             }
-            if (p.frequency_Hz && p.frequency_Hz.value().L3) {
+            if (p.frequency_Hz and p.frequency_Hz.value().L3) {
                 telemetry_data["frequency_L3_Hz"] = p.frequency_Hz.value().L3.value();
             }
 
@@ -834,9 +835,9 @@ void EvseManager::ready() {
 
     //  start with a limit of 0 amps. We will get a budget from EnergyManager that is locally limited by hw
     //  caps.
-    charger->setMaxCurrent(0.0F, date::utc_clock::now() + std::chrono::seconds(10));
+    charger->set_max_current(0.0F, date::utc_clock::now() + std::chrono::seconds(10));
     this->p_evse->publish_waiting_for_external_ready(config.external_ready_to_start_charging);
-    if (!config.external_ready_to_start_charging) {
+    if (not config.external_ready_to_start_charging) {
         // immediately ready, otherwise delay until we get the external signal
         this->ready_to_start_charging();
     }
@@ -866,12 +867,12 @@ int32_t EvseManager::get_reservation_id() {
 }
 
 void EvseManager::switch_DC_mode() {
-    charger->evseReplug();
+    charger->evse_replug();
     setup_fake_DC_mode();
 }
 
 void EvseManager::switch_AC_mode() {
-    charger->evseReplug();
+    charger->evse_replug();
     setup_AC_mode();
 }
 
@@ -950,8 +951,8 @@ void EvseManager::setup_v2h_mode() {
     types::iso15118_charger::DC_EVSEMaximumLimits evseMaxLimits;
     types::iso15118_charger::DC_EVSEMinimumLimits evseMinLimits;
 
-    if (powersupply_capabilities.max_import_current_A.has_value() &&
-        powersupply_capabilities.max_import_power_W.has_value() &&
+    if (powersupply_capabilities.max_import_current_A.has_value() and
+        powersupply_capabilities.max_import_power_W.has_value() and
         powersupply_capabilities.max_import_voltage_V.has_value()) {
         evseMaxLimits.EVSEMaximumCurrentLimit = -powersupply_capabilities.max_import_current_A.value();
         evseMaxLimits.EVSEMaximumPowerLimit = -powersupply_capabilities.max_import_power_W.value();
@@ -963,7 +964,7 @@ void EvseManager::setup_v2h_mode() {
         return;
     }
 
-    if (powersupply_capabilities.min_import_current_A.has_value() &&
+    if (powersupply_capabilities.min_import_current_A.has_value() and
         powersupply_capabilities.min_import_voltage_V.has_value()) {
         evseMinLimits.EVSEMinimumCurrentLimit = -powersupply_capabilities.min_import_current_A.value();
         evseMinLimits.EVSEMinimumVoltageLimit = powersupply_capabilities.min_import_voltage_V.value();
@@ -992,7 +993,7 @@ void EvseManager::setup_v2h_mode() {
 bool EvseManager::updateLocalEnergyLimit(types::energy::ExternalLimits l) {
 
     // received empty limits, fall back to hardware limits
-    if (!l.schedule_import.has_value() && !l.schedule_export.has_value()) {
+    if (not l.schedule_import.has_value() and not l.schedule_export.has_value()) {
         EVLOG_info << "External limits are empty, defaulting to hardware limits";
         if (config.charge_mode == "AC") {
             // by default we import energy
@@ -1032,8 +1033,9 @@ bool EvseManager::updateLocalMaxWattLimit(float max_watt) {
 // Note: deprecated, use updateLocalEnergyLimit. Only kept for node red compat.
 // This overwrites all other schedules set before.
 bool EvseManager::updateLocalMaxCurrentLimit(float max_current) {
-    if (config.charge_mode == "DC")
+    if (config.charge_mode == "DC") {
         return false;
+    }
 
     types::energy::ScheduleReqEntry e;
     e.timestamp = Everest::Date::to_rfc3339(date::utc_clock::now());
@@ -1056,7 +1058,7 @@ bool EvseManager::updateLocalMaxCurrentLimit(float max_current) {
 bool EvseManager::reserve(int32_t id) {
 
     // is the evse Unavailable?
-    if (charger->getCurrentState() == Charger::EvseState::Disabled) {
+    if (charger->get_current_state() == Charger::EvseState::Disabled) {
         return false;
     }
 
@@ -1066,13 +1068,13 @@ bool EvseManager::reserve(int32_t id) {
     }
 
     // is the connector currently ready to accept a new car?
-    if (charger->getCurrentState() != Charger::EvseState::Idle) {
+    if (charger->get_current_state() not_eq Charger::EvseState::Idle) {
         return false;
     }
 
     std::lock_guard<std::mutex> lock(reservation_mutex);
 
-    if (!reserved) {
+    if (not reserved) {
         reserved = true;
         reservation_id = id;
 
@@ -1127,7 +1129,7 @@ void EvseManager::log_v2g_message(Object m) {
 
     std::string xml = "";
     std::string json_str = "";
-    if (m["V2G_Message_XML"].is_null() && m["V2G_Message_JSON"].is_string()) {
+    if (m["V2G_Message_XML"].is_null() and m["V2G_Message_JSON"].is_string()) {
         json_str = m["V2G_Message_JSON"];
     } else if (m["V2G_Message_XML"].is_string()) {
         xml = m["V2G_Message_XML"];
@@ -1146,14 +1148,14 @@ void EvseManager::log_v2g_message(Object m) {
 void EvseManager::charger_was_authorized() {
 
     std::scoped_lock lock(hlc_mutex);
-    if (hlc_waiting_for_auth_pnc && charger->Authorized_PnC()) {
+    if (hlc_waiting_for_auth_pnc and charger->get_authorized_pnc()) {
         r_hlc[0]->call_authorization_response(types::authorization::AuthorizationStatus::Accepted,
                                               types::authorization::CertificateStatus::Accepted);
         hlc_waiting_for_auth_eim = false;
         hlc_waiting_for_auth_pnc = false;
     }
 
-    if (hlc_waiting_for_auth_eim && charger->Authorized_EIM()) {
+    if (hlc_waiting_for_auth_eim and charger->get_authorized_eim()) {
         r_hlc[0]->call_authorization_response(types::authorization::AuthorizationStatus::Accepted,
                                               types::authorization::CertificateStatus::NoCertificateAvailable);
         hlc_waiting_for_auth_eim = false;
@@ -1185,20 +1187,21 @@ void EvseManager::cable_check() {
         Timeout timeout;
         timeout.start(CABLECHECK_CONTACTORS_CLOSE_TIMEOUT);
 
-        while (!timeout.reached()) {
-            if (!contactor_open)
+        while (not timeout.reached()) {
+            if (not contactor_open) {
                 break;
+            }
             std::this_thread::sleep_for(100ms);
         }
 
         // verify the relais are really switched on and set 500V output
-        if (!contactor_open) {
+        if (not contactor_open) {
             if (powersupply_DC_set(config.dc_isolation_voltage_V, 2)) {
                 powersupply_DC_on();
                 imd_start();
 
                 // wait until the voltage has rised to the target value
-                if (!wait_powersupply_DC_voltage_reached(config.dc_isolation_voltage_V)) {
+                if (not wait_powersupply_DC_voltage_reached(config.dc_isolation_voltage_V)) {
                     EVLOG_info << "Voltage did not rise to 500V within timeout";
                     powersupply_DC_off();
                     fail_session();
@@ -1208,7 +1211,7 @@ void EvseManager::cable_check() {
                     // read out one new isolation resistance
                     isolation_measurement.clear();
                     types::isolation_monitor::IsolationMeasurement m;
-                    if (!isolation_measurement.wait_for(m, 10s)) {
+                    if (not isolation_measurement.wait_for(m, 10s)) {
                         EVLOG_info << "Did not receive isolation measurement from IMD within 10 seconds.";
                         powersupply_DC_off();
                         ok = false;
@@ -1225,7 +1228,7 @@ void EvseManager::cable_check() {
                         }
                         powersupply_DC_set(minvoltage, 2);
 
-                        if (!wait_powersupply_DC_below_voltage(minvoltage + 20)) {
+                        if (not wait_powersupply_DC_below_voltage(minvoltage + 20)) {
                             EVLOG_info << "Voltage did not go back to minimal voltage within timeout.";
                             ok = false;
                             fail_session();
@@ -1285,7 +1288,7 @@ void EvseManager::cable_check() {
 }
 
 void EvseManager::powersupply_DC_on() {
-    if (!powersupply_dc_is_on) {
+    if (not powersupply_dc_is_on) {
         session_log.evse(false, "DC power supply: switch ON called");
         r_powersupply_DC[0]->call_setMode(types::power_supply_DC::Mode::Export);
         powersupply_dc_is_on = true;
@@ -1313,9 +1316,9 @@ bool EvseManager::powersupply_DC_set(double _voltage, double _current) {
         current = std::abs(current);
     }
 
-    if ((config.hack_allow_bpt_with_iso2 || config.sae_j2847_2_bpt_enabled) && current_demand_active &&
+    if ((config.hack_allow_bpt_with_iso2 or config.sae_j2847_2_bpt_enabled) and current_demand_active and
         is_actually_exporting_to_grid) {
-        if (!last_is_actually_exporting_to_grid) {
+        if (not last_is_actually_exporting_to_grid) {
             // switching from import from grid to export to grid
             session_log.evse(false, "DC power supply: switch ON in import mode");
             r_powersupply_DC[0]->call_setMode(types::power_supply_DC::Mode::Import);
@@ -1323,15 +1326,15 @@ bool EvseManager::powersupply_DC_set(double _voltage, double _current) {
         last_is_actually_exporting_to_grid = is_actually_exporting_to_grid;
         // Hack: we are exporting to grid but are in ISO-2 mode
         // check limits of supply
-        if (powersupply_capabilities.min_import_voltage_V.has_value() &&
-            voltage >= powersupply_capabilities.min_import_voltage_V.value() &&
+        if (powersupply_capabilities.min_import_voltage_V.has_value() and
+            voltage >= powersupply_capabilities.min_import_voltage_V.value() and
             voltage <= powersupply_capabilities.max_import_voltage_V.value()) {
 
-            if (powersupply_capabilities.max_import_current_A.has_value() &&
+            if (powersupply_capabilities.max_import_current_A.has_value() and
                 current > powersupply_capabilities.max_import_current_A.value())
                 current = powersupply_capabilities.max_import_current_A.value();
 
-            if (powersupply_capabilities.min_import_current_A.has_value() &&
+            if (powersupply_capabilities.min_import_current_A.has_value() and
                 current < powersupply_capabilities.min_import_current_A.value())
                 current = powersupply_capabilities.min_import_current_A.value();
 
@@ -1352,7 +1355,7 @@ bool EvseManager::powersupply_DC_set(double _voltage, double _current) {
 
     } else {
 
-        if ((config.hack_allow_bpt_with_iso2 || config.sae_j2847_2_bpt_enabled) && current_demand_active &&
+        if ((config.hack_allow_bpt_with_iso2 or config.sae_j2847_2_bpt_enabled) and current_demand_active and
             last_is_actually_exporting_to_grid) {
             // switching from export to grid to import from grid
             session_log.evse(false, "DC power supply: switch ON in export mode");
@@ -1361,7 +1364,7 @@ bool EvseManager::powersupply_DC_set(double _voltage, double _current) {
         }
 
         // check limits of supply
-        if (voltage >= powersupply_capabilities.min_export_voltage_V &&
+        if (voltage >= powersupply_capabilities.min_export_voltage_V and
             voltage <= powersupply_capabilities.max_export_voltage_V) {
 
             if (current > powersupply_capabilities.max_export_current_A)
@@ -1400,7 +1403,7 @@ bool EvseManager::wait_powersupply_DC_voltage_reached(double target_voltage) {
     Timeout timeout;
     timeout.start(30s);
     bool voltage_ok = false;
-    while (!timeout.reached()) {
+    while (not timeout.reached()) {
         types::power_supply_DC::VoltageCurrent m;
         if (powersupply_measurement.wait_for(m, 2000ms)) {
             if (fabs(m.voltage_V - target_voltage) < 10) {
@@ -1421,7 +1424,7 @@ bool EvseManager::wait_powersupply_DC_below_voltage(double target_voltage) {
     Timeout timeout;
     timeout.start(30s);
     bool voltage_ok = false;
-    while (!timeout.reached()) {
+    while (not timeout.reached()) {
         types::power_supply_DC::VoltageCurrent m;
         if (powersupply_measurement.wait_for(m, 2000ms)) {
             if (m.voltage_V < target_voltage) {
@@ -1446,13 +1449,13 @@ const std::vector<std::unique_ptr<powermeterIntf>>& EvseManager::r_powermeter_bi
 }
 
 void EvseManager::imd_stop() {
-    if (!r_imd.empty()) {
+    if (not r_imd.empty()) {
         r_imd[0]->call_stop();
     }
 }
 
 void EvseManager::imd_start() {
-    if (!r_imd.empty()) {
+    if (not r_imd.empty()) {
         r_imd[0]->call_start();
     }
 }
@@ -1466,7 +1469,7 @@ void EvseManager::fail_session() {
     if (config.charge_mode == "DC") {
         powersupply_DC_off();
     }
-    charger->set_hlc_error(types::evse_manager::ErrorEnum::HLC);
+    charger->set_hlc_error();
 }
 
 types::evse_manager::EVInfo EvseManager::get_ev_info() {

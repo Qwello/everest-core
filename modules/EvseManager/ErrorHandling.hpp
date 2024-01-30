@@ -110,8 +110,11 @@ public:
                            const std::vector<std::unique_ptr<ac_rcdIntf>>& r_ac_rcd,
                            const std::unique_ptr<evse_managerImplBase>& _p_evse);
 
-    // Signal for internal events type
-    sigslot::signal<> signal_error;
+    // Signal that one error has been raised. Bool argument is true if it preventing charging.
+    sigslot::signal<types::evse_manager::Error, bool> signal_error;
+    // Signal that one error has been cleared. Bool argument is true if it was preventing charging.
+    sigslot::signal<types::evse_manager::Error, bool> signal_error_cleared;
+    // Signal that all errors are cleared (both those preventing charging and not)
     sigslot::signal<> signal_all_errors_cleared;
 
     void raise_overcurrent_error(const std::string& description);
@@ -130,11 +133,14 @@ private:
     const std::vector<std::unique_ptr<ac_rcdIntf>>& r_ac_rcd;
     const std::unique_ptr<evse_managerImplBase>& p_evse;
 
-    bool modify_error_bsp(const Everest::error::Error& error, bool active);
-    bool modify_error_connector_lock(const Everest::error::Error& error, bool active);
-    bool modify_error_ac_rcd(const Everest::error::Error& error, bool active);
+    bool modify_error_bsp(const Everest::error::Error& error, bool active, types::evse_manager::ErrorEnum& evse_error);
+    bool modify_error_connector_lock(const Everest::error::Error& error, bool active,
+                                     types::evse_manager::ErrorEnum& evse_error);
+    bool modify_error_ac_rcd(const Everest::error::Error& error, bool active,
+                             types::evse_manager::ErrorEnum& evse_error);
 
-    bool modify_error_evse_manager(const std::string& error_type, bool active);
+    bool modify_error_evse_manager(const std::string& error_type, bool active,
+                                   types::evse_manager::ErrorEnum& evse_error);
     bool hlc{false};
 
     ActiveErrors active_errors;
