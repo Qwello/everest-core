@@ -349,6 +349,8 @@ private:
     void clear_errors_on_unplug();
 
     static constexpr float CHARGER_ABSOLUTE_MAX_CURRENT{80.};
+
+    static constexpr float CHARGER_ABSOLUTE_MAX_CURRENT{80.};
 };
 
 } // namespace module

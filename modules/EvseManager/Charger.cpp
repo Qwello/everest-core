@@ -257,6 +257,7 @@ void Charger::run_state_machine() {
                 }
 
                 const EvseState target_state(EvseState::PrepareCharging);
+                const EvseState target_state(EvseState::PrepareCharging);
 
                 // EIM done and matching process not started -> we need to go through t_step_EF and fall back to nominal
                 // PWM. This is a complete waste of 4 precious seconds.
@@ -269,7 +270,9 @@ void Charger::run_state_machine() {
                                        "is signalled.");
                             hlc_use_5percent_current_session = true;
                             current_state = target_state;
+                            current_state = target_state;
                         } else {
+                            if (not get_matching_started()) {
                             if (not get_matching_started()) {
                                 // SLAC matching was not started when EIM arrived
 
@@ -284,10 +287,13 @@ void Charger::run_state_machine() {
                                 // Figure 4 of ISO15118-3: X1 start, PnC and EIM
                                 t_step_EF_return_state = target_state;
                                 t_step_EF_return_pwm = 0.;
+                                t_step_EF_return_state = target_state;
+                                t_step_EF_return_pwm = 0.;
                                 // fall back to nominal PWM after the t_step_EF break. Note that
                                 // ac_hlc_enabled_current_session remains untouched as HLC can still start later in
                                 // nominal PWM mode
                                 hlc_use_5percent_current_session = false;
+                                current_state = EvseState::T_step_EF;
                                 current_state = EvseState::T_step_EF;
                             } else {
                                 // SLAC matching was started already when EIM arrived

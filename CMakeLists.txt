@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14.7)
 
 project(everest-core
-    VERSION 2023.12.0
+    VERSION 2024.1.0
     DESCRIPTION "The open operating system for e-mobility charging stations"
 	LANGUAGES CXX C
 )
@@ -38,6 +38,10 @@ option(EVEREST_ENABLE_RUN_SCRIPT_GENERATION "Enables the generation of run scrip
 # This is a flag for building development tests, but not necessarily to run them, for expample in case
 # tests requires hardware.
 option(BUILD_DEV_TESTS "Build dev tests" OFF)
+
+include(ev-define-dependency)
+
+include("module-dependencies.cmake")
 
 find_package(Boost
     COMPONENTS
