@@ -28,7 +28,6 @@ struct Conf {
     std::string serial_port;
     int baudrate;
     int parity;
-    int rs485_direction_gpio;
     bool ignore_echo;
     std::string rxtx_gpio_chip;
     int rxtx_gpio_line;
@@ -60,6 +59,8 @@ protected:
     virtual types::serial_comm_hub_requests::StatusCodeEnum
     handle_modbus_write_multiple_registers(int& target_device_id, int& first_register_address,
                                            types::serial_comm_hub_requests::VectorUint16& data_raw) override;
+    virtual types::serial_comm_hub_requests::StatusCodeEnum
+    handle_modbus_write_single_register(int& target_device_id, int& register_address, int& data) override;
     virtual void handle_nonstd_write(int& target_device_id, int& first_register_address,
                                      int& num_registers_to_read) override;
     virtual types::serial_comm_hub_requests::Result

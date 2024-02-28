@@ -32,6 +32,8 @@
 #include "Timeout.hpp"
 #include "utils/thread.hpp"
 
+#include "scoped_lock_timeout.hpp"
+
 namespace module {
 
 // Abstract events that drive the higher level state machine in Charger.cpp
@@ -85,8 +87,7 @@ public:
 
     void enable(bool en);
 
-    void connector_lock();
-    void connector_unlock();
+    void connector_force_unlock();
 
     // Signal for internal events type
     sigslot::signal<CPEvent> signal_event;
@@ -94,6 +95,9 @@ public:
     sigslot::signal<> signal_unlock;
 
 private:
+    void connector_lock();
+    void connector_unlock();
+    void check_connector_lock();
     const std::unique_ptr<evse_board_supportIntf>& r_bsp;
 
     bool pwm_running{false};
@@ -110,17 +114,21 @@ private:
     RawCPState cp_state{RawCPState::Disabled}, last_cp_state{RawCPState::Disabled};
     AsyncTimeout timeout_state_c1;
 
-    std::mutex state_machine_mutex;
+    Everest::timed_mutex_traceable state_machine_mutex;
     void feed_state_machine();
+    void feed_state_machine_no_thread();
     std::queue<CPEvent> state_machine();
 
     types::evse_board_support::Reason power_on_reason{types::evse_board_support::Reason::PowerOff};
     void call_allow_power_on_bsp(bool value);
 
     std::atomic_bool three_phases{true};
-    std::atomic_bool locked{false};
+    std::atomic_bool is_locked{false};
+    std::atomic_bool should_be_locked{false};
+    std::atomic_bool force_unlocked{false};
 
     std::atomic_bool enabled{false};
+    std::atomic_bool relais_on{false};
 };
 
 } // namespace module

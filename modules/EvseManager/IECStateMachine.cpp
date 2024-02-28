@@ -71,7 +71,7 @@ const std::string cpevent_to_string(CPEvent e) {
 
 IECStateMachine::IECStateMachine(const std::unique_ptr<evse_board_supportIntf>& r_bsp) : r_bsp(r_bsp) {
     // feed the state machine whenever the timer expires
-    timeout_state_c1.signal_reached.connect(&IECStateMachine::feed_state_machine, this);
+    timeout_state_c1.signal_reached.connect(&IECStateMachine::feed_state_machine_no_thread, this);
 
     // Subscribe to bsp driver to receive BspEvents from the hardware
     r_bsp->subscribe_event([this](const types::board_support_common::BspEvent event) {
@@ -89,17 +89,33 @@ void IECStateMachine::process_bsp_event(const types::board_support_common::BspEv
     std::visit(overloaded{[this](RawCPState& raw_state) {
                               // If it is a raw CP state, run it through the state machine
                               {
-                                  std::lock_guard l(state_machine_mutex);
+                                  Everest::scoped_lock_timeout lock(state_machine_mutex,
+                                                                    Everest::MutexDescription::IEC_process_bsp_event);
                                   cp_state = raw_state;
                               }
                               feed_state_machine();
                           },
                           // If it is another CP event, pass through
-                          [this](CPEvent& event) { signal_event(event); }},
+                          [this](CPEvent& event) {
+                              // track relais state as confirmed by BSP
+                              if (event == CPEvent::PowerOn) {
+                                  relais_on = true;
+                              } else if (event == CPEvent::PowerOff) {
+                                  relais_on = false;
+                              }
+                              check_connector_lock();
+
+                              signal_event(event);
+                          }},
                event);
 }
 
 void IECStateMachine::feed_state_machine() {
+    std::thread feed([this]() { feed_state_machine_no_thread(); });
+    feed.detach();
+}
+
+void IECStateMachine::feed_state_machine_no_thread() {
     auto events = state_machine();
 
     // Process all events
@@ -116,7 +132,7 @@ void IECStateMachine::feed_state_machine() {
 std::queue<CPEvent> IECStateMachine::state_machine() {
 
     std::queue<CPEvent> events;
-    std::lock_guard lock(state_machine_mutex);
+    Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::IEC_state_machine);
 
     switch (cp_state) {
 
@@ -260,6 +276,8 @@ std::queue<CPEvent> IECStateMachine::state_machine() {
         break;
     }
 
+    check_connector_lock();
+
     last_cp_state = cp_state;
     last_pwm_running = pwm_running;
     last_power_on_allowed = power_on_allowed;
@@ -270,7 +288,7 @@ std::queue<CPEvent> IECStateMachine::state_machine() {
 // High level state machine sets PWM duty cycle
 void IECStateMachine::set_pwm(double value) {
     {
-        std::scoped_lock lock(state_machine_mutex);
+        Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::IEC_set_pwm);
         if (value > 0 && value < 1) {
             pwm_running = true;
         } else {
@@ -279,33 +297,36 @@ void IECStateMachine::set_pwm(double value) {
     }
 
     r_bsp->call_pwm_on(value * 100);
+
     feed_state_machine();
 }
 
 // High level state machine sets state X1
 void IECStateMachine::set_pwm_off() {
     {
-        std::scoped_lock lock(state_machine_mutex);
+        Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::IEC_set_pwm_off);
         pwm_running = false;
     }
     r_bsp->call_pwm_off();
+    // Don't run the state machine in the callers context
     feed_state_machine();
 }
 
 // High level state machine sets state F
 void IECStateMachine::set_pwm_F() {
     {
-        std::scoped_lock lock(state_machine_mutex);
+        Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::IEC_set_pwm_F);
         pwm_running = false;
     }
     r_bsp->call_pwm_F();
+    // Don't run the state machine in the callers context
     feed_state_machine();
 }
 
 // The higher level state machine in Charger.cpp calls this to indicate it allows contactors to be switched on
 void IECStateMachine::allow_power_on(bool value, types::evse_board_support::Reason reason) {
     {
-        std::scoped_lock lock(state_machine_mutex);
+        Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::IEC_allow_power_on);
         // Only set the flags here in case of power on.
         power_on_allowed = value;
         power_on_reason = reason;
@@ -315,6 +336,7 @@ void IECStateMachine::allow_power_on(bool value, types::evse_board_support::Reas
         }
     }
     // The actual power on will be handled in the state machine to verify it is in the correct CP state etc.
+    // Don't run the state machine in the callers context
     feed_state_machine();
 }
 
@@ -386,16 +408,35 @@ void IECStateMachine::set_overcurrent_limit(double amps) {
 }
 
 void IECStateMachine::connector_lock() {
-    if (not locked) {
-        signal_lock();
-        locked = true;
-    }
+    should_be_locked = true;
 }
 
 void IECStateMachine::connector_unlock() {
-    if (locked) {
+    should_be_locked = false;
+    force_unlocked = false;
+}
+
+void IECStateMachine::connector_force_unlock() {
+    RawCPState cp;
+
+    {
+        Everest::scoped_lock_timeout lock(state_machine_mutex, Everest::MutexDescription::IEC_force_unlock);
+        cp = cp_state;
+    }
+
+    if (cp == RawCPState::B or cp == RawCPState::C) {
+        force_unlocked = true;
+        check_connector_lock();
+    }
+}
+
+void IECStateMachine::check_connector_lock() {
+    if (should_be_locked and not force_unlocked and not is_locked) {
+        signal_lock();
+        is_locked = true;
+    } else if ((not should_be_locked or force_unlocked) and is_locked and not relais_on) {
         signal_unlock();
-        locked = false;
+        is_locked = false;
     }
 }
 

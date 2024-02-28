@@ -50,7 +50,6 @@ load("//third-party/bazel:defs.bzl", "everest_core_defs")
 
 everest_core_defs()
 
-
 load("@everest-framework//third-party/bazel:repos.bzl", "everest_framework_repos")
 
 everest_framework_repos()

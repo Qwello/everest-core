@@ -56,7 +56,8 @@ LemDCBM400600Controller::start_transaction(const types::powermeter::TransactionR
 
     auto [transaction_min_stop_time, transaction_max_stop_time] = get_transaction_stop_time_bounds();
 
-    return {types::powermeter::TransactionRequestStatus::OK, {}, transaction_min_stop_time, transaction_max_stop_time};
+    return {
+        types::powermeter::TransactionRequestStatus::OK, {}, {}, transaction_min_stop_time, transaction_max_stop_time};
 }
 
 void LemDCBM400600Controller::request_device_to_start_transaction(const types::powermeter::TransactionReq& value) {
@@ -85,8 +86,10 @@ LemDCBM400600Controller::stop_transaction(const std::string& transaction_id) {
         return call_with_retry(
             [this, transaction_id]() {
                 this->request_device_to_stop_transaction(transaction_id);
+                auto signed_meter_value =
+                    types::units_signed::SignedMeterValue{fetch_ocmf_result(transaction_id), "", "OCMF"};
                 return types::powermeter::TransactionStopResponse{types::powermeter::TransactionRequestStatus::OK,
-                                                                  fetch_ocmf_result(transaction_id)};
+                                                                  signed_meter_value};
             },
             this->config.transaction_number_of_http_retries, this->config.transaction_retry_wait_in_milliseconds);
     } catch (DCBMUnexpectedResponseException& error) {

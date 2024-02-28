@@ -139,7 +139,7 @@ TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const Tra
     EVLOG_info << "Started the transaction with " << response;
 
     TransactionStartResponse out{TransactionRequestStatus::OK};
-    out.ocmf = response;
+    out.signed_meter_value = {response, "OCMF"};
     return out;
 }
 
@@ -155,7 +155,7 @@ TransactionStopResponse powermeterImpl::handle_stop_transaction_impl(const std::
     const auto response = read_register<std::string>(SIGNATURE_STOP);
     EVLOG_info << "Stopped the transaction with " << response;
 
-    return {TransactionRequestStatus::OK, response};
+    return {TransactionRequestStatus::OK, types::units_signed::SignedMeterValue{response, "OCMF"}};
 }
 
 TransactionStartResponse powermeterImpl::handle_start_transaction(TransactionReq& value) {

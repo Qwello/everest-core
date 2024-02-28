@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14.7)
 
 project(everest-core
-    VERSION 2023.12.0
+    VERSION 2024.2.0
     DESCRIPTION "The open operating system for e-mobility charging stations"
 	LANGUAGES CXX C
 )
@@ -28,16 +28,30 @@ endif()
 # make own cmake modules available
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+# test whether linking with libatomic is required on some platforms
+include(CheckAtomic)
+if(HAVE_CXX_ATOMICS_WITH_LIB OR HAVE_CXX_ATOMICS64_WITH_LIB)
+    set(ATOMIC_LIBS "atomic")
+else()
+    set(ATOMIC_LIBS "")
+endif()
 
 option(CREATE_SYMLINKS "Create symlinks to javascript modules and auxillary files - for development purposes" OFF)
 option(CMAKE_RUN_CLANG_TIDY "Run clang-tidy" OFF)
-option(BUILD_TESTING "Run unit tests" OFF)
 option(ISO15118_2_GENERATE_AND_INSTALL_CERTIFICATES "Automatically generate and install certificates for development purposes" ON)
 option(EVEREST_ENABLE_RUN_SCRIPT_GENERATION "Enables the generation of run scripts (convenience scripts for starting available configurations)" ON)
-
+option(${PROJECT_NAME}_BUILD_TESTING "Build unit tests, used if included as dependency" OFF)
+option(BUILD_TESTING "Build unit tests, used if standalone project" OFF)
+if((${CMAKE_PROJECT_NAME} STREQUAL ${PROJECT_NAME} OR ${PROJECT_NAME}_BUILD_TESTING) AND BUILD_TESTING)
+    set(EVEREST_CORE_BUILD_TESTING ON)
+endif()
 # This is a flag for building development tests, but not necessarily to run them, for expample in case
 # tests requires hardware.
 option(BUILD_DEV_TESTS "Build dev tests" OFF)
+
+include(ev-define-dependency)
+
+include("module-dependencies.cmake")
 
 find_package(Boost
     COMPONENTS
@@ -110,8 +124,9 @@ if(DOXYGEN_FOUND)
 endif()
 
 # testing
-if(BUILD_TESTING)
+if(EVEREST_CORE_BUILD_TESTING)
     include(CTest)
+    enable_testing()
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 
     evc_include(CodeCoverage)
@@ -121,13 +136,13 @@ if(BUILD_TESTING)
     add_subdirectory(tests)
 
     setup_target_for_coverage_gcovr_html(
-        NAME gcovr_coverage
+        NAME ${PROJECT_NAME}_gcovr_coverage
         EXECUTABLE test_config
         DEPENDENCIES test_config everest
     )
 
     setup_target_for_coverage_lcov(
-        NAME lcov_coverage
+        NAME ${PROJECT_NAME}_lcov_coverage
         EXECUTABLE test_config
         DEPENDENCIES test_config everest
     )

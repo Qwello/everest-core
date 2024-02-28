@@ -37,9 +37,13 @@ provides:
         type: boolean
         default: false
       max_packet_size:
-        description: Maximum size of a packet to read/write in bytes. Payload exceeding the size will be chunked.
+        description: >-
+          Maximum size of a packet to read/write in bytes. Payload exceeding the size will be chunked.
+          The APU size according to [wikipedia](https://en.wikipedia.org/wiki/Modbus) is 256 bytes,
+          which is used as default here.
         type: integer
-        minimum: 0
+        # 7 is a minimum packet size to transfer a response
+        minimum: 7
         maximum: 65536
         default: 256
       initial_timeout_ms:

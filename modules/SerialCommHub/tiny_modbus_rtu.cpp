@@ -307,7 +307,6 @@ int TinyModbusRTU::read_reply(uint8_t* rxbuf, int rxbuf_len) {
             int bytes_read = read(fd, rxbuf + bytes_read_total, rxbuf_len - bytes_read_total);
             if (bytes_read > 0) {
                 bytes_read_total += bytes_read;
-                EVLOG_debug << "RECVD: " << hexdump(rxbuf, bytes_read_total);
             }
         }
     }
@@ -320,6 +319,11 @@ std::vector<uint16_t> TinyModbusRTU::txrx(uint8_t device_address, FunctionCode f
                                           std::vector<uint16_t> request) {
     // This only supports chunking of the read-requests.
     std::vector<uint16_t> out;
+
+    if (max_packet_size < MODBUS_MIN_REPLY_SIZE + 2) {
+        EVLOG_error << fmt::format("Max packet size too small: {}", max_packet_size);
+        return {};
+    }
 
     const uint16_t register_chunk = (max_packet_size - MODBUS_MIN_REPLY_SIZE) / 2;
     size_t written_elements = 0;
@@ -351,6 +355,56 @@ std::vector<uint16_t> TinyModbusRTU::txrx(uint8_t device_address, FunctionCode f
     return out;
 }
 
+std::vector<uint8_t> _make_single_write_request(uint8_t device_address, uint16_t register_address, bool wait_for_reply,
+                                                uint16_t data) {
+    const int req_len = 8;
+    std::vector<uint8_t> req(req_len);
+
+    req[DEVICE_ADDRESS_POS] = device_address;
+    req[FUNCTION_CODE_POS] = static_cast<uint8_t>(FunctionCode::WRITE_SINGLE_HOLDING_REGISTER);
+
+    register_address = htobe16(register_address);
+    data = htobe16(data);
+    memcpy(req.data() + REQ_TX_FIRST_REGISTER_ADDR_POS, &register_address, 2);
+    memcpy(req.data() + REQ_TX_SINGLE_REG_PAYLOAD_POS, &data, 2);
+    append_checksum(req.data(), req_len);
+
+    return req;
+}
+
+std::vector<uint8_t> _make_generic_request(uint8_t device_address, FunctionCode function,
+                                           uint16_t first_register_address, uint16_t register_quantity,
+                                           std::vector<uint16_t> request) {
+    // size of request
+    int req_len = (request.size() == 0 ? 0 : 2 * request.size() + 1) + MODBUS_BASE_PAYLOAD_SIZE;
+    std::vector<uint8_t> req(req_len);
+
+    // add header
+    req[DEVICE_ADDRESS_POS] = device_address;
+    req[FUNCTION_CODE_POS] = function;
+
+    first_register_address = htobe16(first_register_address);
+    register_quantity = htobe16(register_quantity);
+    memcpy(req.data() + REQ_TX_FIRST_REGISTER_ADDR_POS, &first_register_address, 2);
+    memcpy(req.data() + REQ_TX_QUANTITY_POS, &register_quantity, 2);
+
+    if (function == FunctionCode::WRITE_MULTIPLE_HOLDING_REGISTERS) {
+        // write byte count
+        req[REQ_TX_MULTIPLE_REG_BYTE_COUNT_POS] = request.size() * 2;
+        // add request data
+        int i = REQ_TX_MULTIPLE_REG_BYTE_COUNT_POS + 1;
+        for (auto r : request) {
+            r = htobe16(r);
+            memcpy(req.data() + i, &r, 2);
+            i += 2;
+        }
+    }
+
+    // set checksum in the last 2 bytes
+    append_checksum(req.data(), req_len);
+
+    return req;
+}
 /*
     This function transmits a modbus request and waits for the reply.
     Parameter request is optional and is only used for writing multiple registers.
@@ -359,41 +413,16 @@ std::vector<uint16_t> TinyModbusRTU::txrx_impl(uint8_t device_address, FunctionC
                                                uint16_t first_register_address, uint16_t register_quantity,
                                                bool wait_for_reply, std::vector<uint16_t> request) {
     {
-        // size of request
-        int req_len = (request.size() == 0 ? 0 : 2 * request.size() + 1) + MODBUS_BASE_PAYLOAD_SIZE;
-        std::unique_ptr<uint8_t[]> req(new uint8_t[req_len]);
-
-        // add header
-        req[DEVICE_ADDRESS_POS] = device_address;
-        req[FUNCTION_CODE_POS] = function;
-
-        first_register_address = htobe16(first_register_address);
-        register_quantity = htobe16(register_quantity);
-        memcpy(req.get() + REQ_TX_FIRST_REGISTER_ADDR_POS, &first_register_address, 2);
-        memcpy(req.get() + REQ_TX_QUANTITY_POS, &register_quantity, 2);
-
-        if (function == FunctionCode::WRITE_MULTIPLE_HOLDING_REGISTERS) {
-            // write byte count
-            req[REQ_TX_MULTIPLE_REG_BYTE_COUNT_POS] = request.size() * 2;
-            // add request data
-            int i = REQ_TX_MULTIPLE_REG_BYTE_COUNT_POS + 1;
-            for (auto r : request) {
-                r = htobe16(r);
-                memcpy(req.get() + i, &r, 2);
-                i += 2;
-            }
-        }
-        // set checksum in the last 2 bytes
-        append_checksum(req.get(), req_len);
-
-        EVLOG_debug << "SEND: " << hexdump(req.get(), req_len);
-
+        auto req =
+            function == FunctionCode::WRITE_SINGLE_HOLDING_REGISTER
+                ? _make_single_write_request(device_address, first_register_address, wait_for_reply, request.at(0))
+                : _make_generic_request(device_address, function, first_register_address, register_quantity, request);
         // clear input and output buffer
         tcflush(fd, TCIOFLUSH);
 
         // write to serial port
         rxtx_gpio.set(false);
-        write(fd, req.get(), req_len);
+        write(fd, req.data(), req.size());
         if (rxtx_gpio.is_ready()) {
             // if we are using GPIO to switch between RX/TX, use the fast version of tcdrain with exact timing
             fast_tcdrain(fd);
@@ -405,7 +434,7 @@ std::vector<uint16_t> TinyModbusRTU::txrx_impl(uint8_t device_address, FunctionC
 
         if (ignore_echo) {
             // read back echo of what we sent and ignore it
-            read_reply(req.get(), req_len);
+            read_reply(req.data(), req.size());
         }
     }
 

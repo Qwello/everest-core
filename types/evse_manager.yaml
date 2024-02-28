@@ -13,8 +13,9 @@ types:
         type: string
         $ref: /evse_manager#/StopTransactionReason
       id_tag:
-        description: Id tag that was used to stop the transaction.
-        type: string
+        description: Id tag that was used to stop the transaction. Only present if transaction was stopped locally.
+        type: object
+        $ref: /authorization#/ProvidedIdToken
   StopTransactionReason:
     description: >-
       Reason for stopping transaction
@@ -127,8 +128,10 @@ types:
       - TransactionFinished
       - SessionFinished
       - Error
+      - ErrorCleared
       - AllErrorsCleared
       - PermanentFault
+      - PermanentFaultCleared
       - ReservationStart
       - ReservationEnd
       - ReplugStarted
@@ -189,6 +192,10 @@ types:
         description: Transaction start exported meter value
         type: object
         $ref: /powermeter#/Powermeter
+      signed_meter_value:
+        description: The signed meter value report of the started transaction
+        type: object
+        $ref: /units_signed#/SignedMeterValue
       reservation_id:
         description: Id of the reservation
         type: integer
@@ -208,39 +215,61 @@ types:
         description: Transaction finished meter value
         type: object
         $ref: /powermeter#/Powermeter
-      # Signing the meter values takes some time and is only needed at the
-      # session end. We move the `start_signed_meter_value` from
-      # `TransactionStarted` to `TransactionFinished` - such that the time
-      # critical `TransactionStarted` is not deferred by the signing.
+      signed_meter_value:
+        description: The signed meter value report of the stopped transaction
+        type: object
+        $ref: /units_signed#/SignedMeterValue
       start_signed_meter_value:
-        description: Signed meter value
-        type: string
-      stop_signed_meter_value:
-        description: Signed meter value
-        type: string
+        description: Optional signed meter value report of the started
+        type: object
+        $ref: /units_signed#/SignedMeterValue
       reason:
         description: Reason for stopping transaction
         type: string
         $ref: /evse_manager#/StopTransactionReason
       id_tag:
-        description: Id tag that was used to stop the transaction
-        type: string
+        description: Id tag that was used to stop the transaction. Only present if transaction was stopped locally.
+        type: object
+        $ref: /authorization#/ProvidedIdToken
   ErrorEnum:
     description: >-
       Note this is only kept for compatibility with the legacy error handling and will be removed soon.
     type: string
     enum:
-      - Car
-      - CarDiodeFault
-      - RCD
-      - RCDDC
+      - RCD_Selftest
+      - RCD_DC
+      - RCD_AC
+      - VendorError
+      - VendorWarning
+      - ConnectorLockCapNotCharged
+      - ConnectorLockUnexpectedOpen
+      - ConnectorLockUnexpectedClose
+      - ConnectorLockFailedLock
+      - ConnectorLockFailedUnlock
+      - MREC1ConnectorLockFailure
+      - MREC2GroundFailure
+      - MREC3HighTemperature
+      - MREC4OverCurrentFailure
+      - MREC5OverVoltage
+      - MREC6UnderVoltage
+      - MREC8EmergencyStop
+      - MREC10InvalidVehicleMode
+      - MREC14PilotFault
+      - MREC15PowerLoss
+      - MREC17EVSEContactorFault
+      - MREC18CableOverTempDerate
+      - MREC19CableOverTempStop
+      - MREC20PartialInsertion
+      - MREC23ProximityFault
+      - MREC24ConnectorVoltageHigh
+      - MREC25BrokenLatch
+      - MREC26CutCable
+      - DiodeFault
       - VentilationNotAvailable
-      - Internal
-      - SLAC
-      - HLC
-      - Other
       - BrownOut
       - EnergyManagement
+      - PermanentFault
+      - PowermeterTransactionStartFailed
   Error:
     description: >-
       Error object that contains information about the error and optional vendor error information
@@ -248,11 +277,23 @@ types:
     additionalProperties: false
     required:
       - error_code
+      - error_description
+      - error_severity
     properties:
       error_code:
         description: The error enum
         type: string
         $ref: /evse_manager#/ErrorEnum
+      error_description:
+        description: Description of the error (human readable)
+        type: string
+      error_severity:
+        description: Severity of the error
+        type: string
+        enum:
+          - High
+          - Medium
+          - Low
       vendor_error:
         description: The error code of the vendor
         type: string

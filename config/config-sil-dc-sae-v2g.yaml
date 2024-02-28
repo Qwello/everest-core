@@ -19,7 +19,6 @@ active_modules:
     config_module:
       connector_id: 1
       country_code: DE
-      rcd_enabled: true
       evse_id: DE*PNX*E12345*1
       evse_id_din: 49A80737A45678
       session_logging: true
@@ -57,7 +56,7 @@ active_modules:
   slac:
     module: JsSlacSimulator
   imd:
-    module: JsIMDSimulator
+    module: IMDSimulator
   car_simulator:
     module: JsCarSimulator
     config_module:

@@ -158,6 +158,38 @@ types::serial_comm_hub_requests::StatusCodeEnum serial_communication_hubImpl::ha
     }
 }
 
+types::serial_comm_hub_requests::StatusCodeEnum
+serial_communication_hubImpl::handle_modbus_write_single_register(int& target_device_id, int& register_address,
+                                                                  int& data) {
+    types::serial_comm_hub_requests::Result result;
+    std::vector<uint16_t> response;
+
+    {
+        std::scoped_lock lock(serial_mutex);
+
+        uint8_t retry_counter{this->num_resends_on_error};
+        while (retry_counter-- > 0) {
+
+            EVLOG_debug << fmt::format("Try {} Call modbus_client->write_single_register(id {} addr {} data {})",
+                                       (int)retry_counter, (uint8_t)target_device_id, (uint16_t)register_address,
+                                       (uint16_t)data);
+
+            response = modbus.txrx(target_device_id, tiny_modbus::FunctionCode::WRITE_SINGLE_HOLDING_REGISTER,
+                                   register_address, 1, config.max_packet_size, true, {static_cast<uint16_t>(data)});
+            if (response.size() > 0) {
+                break;
+            }
+        }
+    }
+    EVLOG_debug << fmt::format("Done writing");
+    // process response
+    if (response.size() > 0) {
+        return types::serial_comm_hub_requests::StatusCodeEnum::Success;
+    } else {
+        return types::serial_comm_hub_requests::StatusCodeEnum::Error;
+    }
+}
+
 void serial_communication_hubImpl::handle_nonstd_write(int& target_device_id, int& first_register_address,
                                                        int& num_registers_to_read) {
 }
