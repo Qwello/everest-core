@@ -58,7 +58,6 @@ load("@everest-framework//third-party/bazel:defs.bzl", "everest_framework_deps")
 
 everest_framework_deps()
 
-
 load("@rules_python//python:pip.bzl", "pip_parse")
 
 pip_parse(
