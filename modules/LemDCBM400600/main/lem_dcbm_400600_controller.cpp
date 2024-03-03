@@ -95,13 +95,13 @@ LemDCBM400600Controller::stop_transaction(const std::string& transaction_id) {
         std::string error_message = fmt::format("Failed to stop transaction {}: {}", transaction_id, error.what());
         EVLOG_error << error_message;
         return types::powermeter::TransactionStopResponse{
-            types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR, {}, error_message};
+            types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR, {}, {}, error_message};
     } catch (HttpClientError& error) {
         std::string error_message = fmt::format("Failed to stop transaction {} - connection to device failed: {}",
                                                 transaction_id, error.what());
         EVLOG_error << error_message;
         return types::powermeter::TransactionStopResponse{
-            types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR, {}, error_message};
+            types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR, {}, {}, error_message};
     }
 }
 

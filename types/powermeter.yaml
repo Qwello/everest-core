@@ -47,6 +47,7 @@ types:
       status:
         description: Response status that indicates whether the transaction start request could successfully be performed.
         $ref: /powermeter#/TransactionRequestStatus
+        type: object
       error:
         description: If status is not OK, a verbose error message.
         type: string
@@ -68,6 +69,11 @@ types:
       status:
         description: Response status that indicates whether the transaction stop request could successfully be performed.
         $ref: /powermeter#/TransactionRequestStatus
+        type: object
+      start_signed_meter_value:
+        description: The signed meter value report for start of transaction. Needs to be filled if meter provides separate values for start and stop.
+        type: object
+        $ref: /units_signed#/SignedMeterValue
       signed_meter_value:
         description: The signed meter value report of the stopped transaction. Must be provided if status is OK.
         type: object
@@ -76,7 +82,7 @@ types:
         description: If status is not OK, a verbose error message.
         type: string
   Powermeter:
-    description: Measured dataset (AC or DC)
+    description: Measured dataset (AC or DC). Represents live measure snapshot.
     type: object
     additionalProperties: false
     required:

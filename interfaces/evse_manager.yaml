@@ -168,6 +168,10 @@ vars:
     description: Measured dataset
     type: object
     $ref: /powermeter#/Powermeter
+  transaction_meter_value:
+    description: Signed meter value attached to transaction context
+    type: object
+    $ref: /units_signed#/TransactionMeterValue
   evse_id:
     description: EVSE ID including the connector number, e.g. DE*PNX*E123456*1
     type: string

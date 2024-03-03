@@ -9,7 +9,7 @@
  *  IEC 61851-1 compliant AC/DC high level charging logic
  *
  * This class provides:
- *  1) Hi level state machine that is controlled by a) events from board_support_ac interface
+ *  1) Hi level state machine that is controlled by a) events from evse_board_support interface
  *     and b) by external commands from higher levels
  *
  * The state machine runs in its own (big) thread. After plugin,
@@ -30,11 +30,17 @@
 #include <date/date.h>
 #include <date/tz.h>
 #include <generated/interfaces/ISO15118_charger/Interface.hpp>
+#include <generated/interfaces/powermeter/Interface.hpp>
 #include <generated/types/authorization.hpp>
 #include <generated/types/evse_manager.hpp>
+#include <generated/types/units_signed.hpp>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <sigslot/signal.hpp>
+#include <string>
+#include <vector>
 
 #include "ErrorHandling.hpp"
 #include "IECStateMachine.hpp"
@@ -48,7 +54,8 @@ const std::string IEC62196Type2Socket = "IEC62196Type2Socket";
 class Charger {
 public:
     Charger(const std::unique_ptr<IECStateMachine>& bsp, const std::unique_ptr<ErrorHandling>& error_handling,
-            const types::evse_board_support::Connector_type& connector_type);
+            const std::vector<std::unique_ptr<powermeterIntf>>& r_powermeter_billing,
+            const types::evse_board_support::Connector_type& connector_type, const std::string& evse_id);
     ~Charger();
 
     enum class ChargeMode {
@@ -175,7 +182,22 @@ public:
 
     bool errors_prevent_charging();
 
+    /// @brief Returns the OCMF start data.
+    ///
+    /// The data is generated when starting the transaction. The call resets the
+    /// internal variable and is thus not idempotent.
+    std::optional<types::units_signed::SignedMeterValue> get_start_signed_meter_value();
+
+    /// @brief Returns the OCMF stop data.
+    ///
+    /// The data is generated when stopping the transaction. The call resets the
+    /// internal variable and is thus not idempotent.
+    std::optional<types::units_signed::SignedMeterValue> get_stop_signed_meter_value();
+
 private:
+    std::optional<types::units_signed::SignedMeterValue>
+    take_signed_meter_data(std::optional<types::units_signed::SignedMeterValue>& data);
+
     bool errors_prevent_charging_internal();
     float get_max_current_internal();
     bool deauthorize_internal();
@@ -211,7 +233,7 @@ private:
     void start_session(bool authfirst);
     void stop_session();
 
-    void start_transaction();
+    bool start_transaction();
     void stop_transaction();
 
     // This mutex locks all variables related to the state machine
@@ -249,6 +271,9 @@ private:
         // non standard compliant option: time out after a while and switch back to DC to get SoC update
         bool ac_with_soc_timeout;
         bool contactor_welded{false};
+
+        std::optional<types::units_signed::SignedMeterValue> stop_signed_meter_value;
+        std::optional<types::units_signed::SignedMeterValue> start_signed_meter_value;
     } shared_context;
 
     struct ConfigContext {
@@ -300,6 +325,8 @@ private:
     const std::unique_ptr<IECStateMachine>& bsp;
     const std::unique_ptr<ErrorHandling>& error_handling;
     const types::evse_board_support::Connector_type& connector_type;
+    const std::string evse_id;
+    const std::vector<std::unique_ptr<powermeterIntf>>& r_powermeter_billing;
 
     // constants
     static constexpr float CHARGER_ABSOLUTE_MAX_CURRENT{80.};

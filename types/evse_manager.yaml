@@ -324,7 +324,7 @@ types:
       session_finished:
         description: data for the SessionFinished event
         type: object
-        $ref: /evse_manager#/SessionFinished  
+        $ref: /evse_manager#/SessionFinished
       transaction_started:
         description: data for TransactionStarted event
         type: object

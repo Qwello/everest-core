@@ -275,6 +275,7 @@ void evse_managerImpl::ready() {
                     transaction_finished.meter_value.energy_Wh_export.value().total;
             }
 
+            transaction_finished.signed_meter_value = mod->charger->get_stop_signed_meter_value();
             mod->telemetry.publish("session", "events", telemetry_data);
 
             se.transaction_finished.emplace(transaction_finished);
