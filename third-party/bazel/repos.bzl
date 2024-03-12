@@ -19,10 +19,17 @@ def everest_core_repos():
     )
 
     maybe(
-        http_archive,
+        git_repository,
         name = "everest-framework",
-        url = "https://github.com/golovasteek/everest-framework/archive/e75752db299940219b2fae2cfddc23482129f921.tar.gz",
-        strip_prefix = "everest-framework-e75752db299940219b2fae2cfddc23482129f921",
+        remote = "https://github.com/qwello/everest-framework.git",
+        commit = "2306559764824a61406da6641985517e3b61f193",
+    )
+
+    maybe(
+        git_repository,
+        name = "everest-utils",
+        remote = "https://github.com/Qwello/everest-utils.git",
+        commit = "8d8c1b7172d114a6f4a0fc5f4d6e2d8ae1a0da82",
     )
 
     maybe(
@@ -169,55 +176,3 @@ cc_library(
 )
         """
     )
-
-    maybe(
-        git_repository,
-        name = "everest-utils",
-        remote = "https://github.com/EVerest/everest-utils.git",
-        tag = "v0.1.6",
-        build_file_content = """
-load("@ev_cli_pip_deps//:requirements.bzl", "requirement")
-
-genrule(
-    name = "main",
-    outs = ["ev-cli.py"],
-    cmd = '''
-echo "from ev_cli.ev import main" > $@
-echo "main()" >> $@
-'''
-)
-genrule(
-    name = "version",
-    outs = ["ev-dev-tools/src/ev_cli/__version__.py"],
-    cmd = "echo 0.1.6 > $@"
-)
-
-py_library(
-    name = "lib",
-    srcs = glob(
-        ["ev-dev-tools/src/ev_cli/*.py"]
-    ) + [
-        ":version",
-    ],
-    deps = [
-        requirement("jinja2"),
-        requirement("jsonschema"),
-        requirement("stringcase"),
-        requirement("pyyaml"),
-    ],
-    imports = ["ev-dev-tools/src"],
-)
-
-py_binary(
-    name = "ev-cli",
-    data = glob(
-        ["ev-dev-tools/src/ev_cli/templates/**"],
-    ),
-    srcs = [":main"],
-    deps = [":lib"],
-    legacy_create_init = False,
-    visibility = ["//visibility:public"],
-)
-        """
-    )
-
