@@ -21,14 +21,14 @@ def everest_core_repos():
     maybe(
         git_repository,
         name = "everest-framework",
-        url = "https://github.com/qwello/everest-framework.git",
+        remote = "https://github.com/qwello/everest-framework.git",
         commit = "2306559764824a61406da6641985517e3b61f193",
     )
 
     maybe(
         git_repository,
         name = "everest-utils",
-        url = "https://github.com/Qwello/everest-utils.git",
+        remote = "https://github.com/Qwello/everest-utils.git",
         commit = "8d8c1b7172d114a6f4a0fc5f4d6e2d8ae1a0da82",
     )
 
