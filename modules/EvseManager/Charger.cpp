@@ -1056,8 +1056,6 @@ bool Charger::start_transaction() {
     shared_context.stop_transaction_id_token.reset();
     shared_context.transaction_active = true;
 
-    // The `TransactionStarted` is a time critical event. We send it before
-    // trying to sign the meter values, which takes time to complete.
     const types::powermeter::TransactionReq req{evse_id, "", "", 0, 0, ""};
     for (const auto& meter : r_powermeter_billing) {
         const auto response = meter->call_start_transaction(req);
@@ -1088,6 +1086,7 @@ void Charger::stop_transaction() {
             EVLOG_error << "Failed to stop a transaction on the power meter " << response.error.value_or("");
             break;
         } else if (response.status == types::powermeter::TransactionRequestStatus::OK) {
+            shared_context.start_signed_meter_value = response.start_signed_meter_value;
             shared_context.stop_signed_meter_value = response.signed_meter_value;
             break;
         }

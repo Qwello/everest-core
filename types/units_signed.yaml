@@ -153,34 +153,4 @@ types:
         description: VAR phase C
         type: object
         $ref: /units_signed#/SignedMeterValue
-  SignedMeterValueContext:
-    description: Context of the signed value within the transaction.
-    type: string
-    enum:
-      # Signed value belongs to transaction start
-      - TRANSACTION_START
-      # Signed value belongs to transaction stop
-      - TRANSACTION_STOP
-      # Signed value taken in the middle of transaction
-      - CURRENT
-      # Signed value includes whole set of measuremtes for transaction
-      - TRANSACTION
-  TransactionMeterValue:
-    description: Signed meter value attached to transaction context
-    type: object
-    required:
-      - transaction_id
-      - signed_meter_value
-      - signature_context
-    properties:
-      transaction_id:
-        description: OCPP transaction UUID
-        type: string
-      signed_meter_value:
-        description: The signed meter data.
-        type: object
-        $ref: /units_signed#/SignedMeterValue
-      signature_context:
-        description: Context of the signed value.
-        type: string
-        $ref: /units_signed#/SignedMeterValueContext
+  

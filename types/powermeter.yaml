@@ -82,7 +82,7 @@ types:
         description: If status is not OK, a verbose error message.
         type: string
   Powermeter:
-    description: Measured dataset (AC or DC). Represents live measure snapshot.
+    description: Measured dataset (AC or DC.
     type: object
     additionalProperties: false
     required:
