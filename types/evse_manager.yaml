@@ -170,7 +170,7 @@ types:
       timestamp:
         description: Session start time in RFC3339 format
         type: string
-        format: date-time
+        format: date-time   
   TransactionStarted:
     description: Data for the TransactionStarted event
     type: object
@@ -221,6 +221,10 @@ types:
         $ref: /units_signed#/SignedMeterValue
       signed_meter_value:
         description: The signed meter value report of the stopped transaction
+        type: object
+        $ref: /units_signed#/SignedMeterValue
+      start_signed_meter_value:
+        description: Optional signed meter value report of the started
         type: object
         $ref: /units_signed#/SignedMeterValue
       reason:

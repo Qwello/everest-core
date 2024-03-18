@@ -34,7 +34,7 @@ public:
     bool is_ca_certificate_installed(const ocpp::CaCertificateType& certificate_type) override;
     std::string generate_certificate_signing_request(const ocpp::CertificateSigningUseEnum& certificate_type,
                                                      const std::string& country, const std::string& organization,
-                                                     const std::string& common, bool use_tpm) override;
+                                                     const std::string& common, bool use_tpm);
     std::optional<ocpp::KeyPair> get_key_pair(const ocpp::CertificateSigningUseEnum& certificate_type) override;
     bool update_certificate_links(const ocpp::CertificateSigningUseEnum& certificate_type) override;
     std::string get_verify_file(const ocpp::CaCertificateType& certificate_type) override;
