@@ -216,15 +216,13 @@ types:
         type: object
         $ref: /powermeter#/Powermeter
       start_signed_meter_value:
-        description: The starting signed meter value report of the stopped transaction. If not included in the `signed_meter_value` object, it must be included here.
+        description: >-
+            The starting signed meter value report of the stopped transaction.
+            If not included in the `signed_meter_value` object, it must be included here.
         type: object
         $ref: /units_signed#/SignedMeterValue
       signed_meter_value:
         description: The signed meter value report of the stopped transaction
-        type: object
-        $ref: /units_signed#/SignedMeterValue
-      start_signed_meter_value:
-        description: Optional signed meter value report of the started
         type: object
         $ref: /units_signed#/SignedMeterValue
       reason:

@@ -1056,7 +1056,6 @@ bool Charger::start_transaction() {
     shared_context.stop_transaction_id_token.reset();
     shared_context.transaction_active = true;
 
-<<<<<<< HEAD
     const types::powermeter::TransactionReq req{evse_id, "", "", 0, 0, ""};
     for (const auto& meter : r_powermeter_billing) {
         const auto response = meter->call_start_transaction(req);
@@ -1070,26 +1069,6 @@ bool Charger::start_transaction() {
     }
 
     signal_transaction_started_event(shared_context.id_token);
-=======
-    // The `TransactionStarted` is a time critical event. We send it before
-    // trying to sign the meter values, which takes time to complete.
-    signal_transaction_started_event(shared_context.id_token);
-    const types::powermeter::TransactionReq req{evse_id, "", "", 0, 0, ""};
-    for (const auto& meter : r_powermeter_billing) {
-        const auto response = meter->call_start_transaction(req);
-        // If we want to start the session but fail, we stop the charging since
-        // we can't bill the customer.
-        if (response.status == types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR) {
-            EVLOG_error << "Failed to start a transaction on the power meter " << response.error.value_or("");
-            set_faulted();
-            return false;
-        } else if (response.status == types::powermeter::TransactionRequestStatus::OK) {
-            shared_context.start_signed_meter_value = response.signed_meter_value;
-            break;
-        }
-    }
-
->>>>>>> qwello/main
     return true;
 }
 
@@ -1107,10 +1086,7 @@ void Charger::stop_transaction() {
             EVLOG_error << "Failed to stop a transaction on the power meter " << response.error.value_or("");
             break;
         } else if (response.status == types::powermeter::TransactionRequestStatus::OK) {
-<<<<<<< HEAD
             shared_context.start_signed_meter_value = response.start_signed_meter_value;
-=======
->>>>>>> qwello/main
             shared_context.stop_signed_meter_value = response.signed_meter_value;
             break;
         }
