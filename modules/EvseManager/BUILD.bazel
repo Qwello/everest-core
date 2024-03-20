@@ -4,6 +4,7 @@ SLOTS = [
     "energy_grid",
     "evse",
     "token_provider",
+    "random_delay",
 ]
 
 cc_everest_module(

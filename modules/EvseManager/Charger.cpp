@@ -93,6 +93,7 @@ Charger::~Charger() {
 }
 
 void Charger::main_thread() {
+
     // Enable CP output
     bsp->enable(true);
 
@@ -1013,7 +1014,7 @@ bool Charger::cancel_transaction(const types::evse_manager::StopTransactionReque
 
         for (const auto& meter : r_powermeter_billing) {
             const auto response =
-                meter->call_stop_transaction(shared_context.stop_transaction_id_token.value().id_token);
+                meter->call_stop_transaction(shared_context.stop_transaction_id_token.value().id_token.value);
             // If we fail to stop the transaction, we ignore since there is no
             // path to recovery. Its also not clear what to do
             if (response.status == types::powermeter::TransactionRequestStatus::UNEXPECTED_ERROR) {
@@ -1362,8 +1363,10 @@ void Charger::check_soft_over_current() {
 bool Charger::power_available() {
     if (shared_context.max_current_valid_until < date::utc_clock::now()) {
         EVLOG_warning << "Power budget expired, falling back to 0.";
-        shared_context.max_current = 0.;
-        signal_max_current(shared_context.max_current);
+        if (shared_context.max_current > 0.) {
+            shared_context.max_current = 0.;
+            signal_max_current(shared_context.max_current);
+        }
     }
     return (get_max_current_internal() > 5.9);
 }
