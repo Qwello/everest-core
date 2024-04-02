@@ -45,9 +45,9 @@ types:
       - status
     properties:
       status:
+        type: object
         description: Response status that indicates whether the transaction start request could successfully be performed.
         $ref: /powermeter#/TransactionRequestStatus
-        type: object
       error:
         description: If status is not OK, a verbose error message.
         type: string
@@ -71,9 +71,9 @@ types:
       - status
     properties:
       status:
+        type: object
         description: Response status that indicates whether the transaction stop request could successfully be performed.
         $ref: /powermeter#/TransactionRequestStatus
-        type: object
       signed_meter_value:
         description: The signed meter value report of the stopped transaction. Must be provided if status is OK.
         type: object
