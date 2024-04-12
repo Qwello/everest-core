@@ -87,6 +87,8 @@ private:
     /// @brief Writes the "Input" to the register address.
     /// The Input must be serializable.
     template <typename Input> void write_register(const utils::Register& register_data, const Input& data) const;
+
+    std::string start_signed_meter_value;
     // ev@3370e4dd-95f4-47a9-aaec-ea76f34a66c9:v1
 };
 

@@ -43,6 +43,7 @@
 #include <vector>
 
 #include "ErrorHandling.hpp"
+#include "EventQueue.hpp"
 #include "IECStateMachine.hpp"
 #include "scoped_lock_timeout.hpp"
 
@@ -327,6 +328,15 @@ private:
     const types::evse_board_support::Connector_type& connector_type;
     const std::string evse_id;
     const std::vector<std::unique_ptr<powermeterIntf>>& r_powermeter_billing;
+
+    // ErrorHandling events
+    enum class ErrorHandlingEvents : std::uint8_t {
+        prevent_charging,
+        prevent_charging_welded,
+        all_errors_cleared
+    };
+
+    EventQueue<ErrorHandlingEvents> error_handling_event_queue;
 
     // constants
     static constexpr float CHARGER_ABSOLUTE_MAX_CURRENT{80.};
