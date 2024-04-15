@@ -223,10 +223,6 @@ types:
         description: The signed meter value report of the stopped transaction
         type: object
         $ref: /units_signed#/SignedMeterValue
-      start_signed_meter_value:
-        description: Optional signed meter value report of the started
-        type: object
-        $ref: /units_signed#/SignedMeterValue
       reason:
         description: Reason for stopping transaction
         type: string
