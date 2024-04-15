@@ -135,11 +135,10 @@ TransactionStartResponse powermeterImpl::handle_start_transaction_impl(const Tra
     write_register(SIGNATURE_STATUS_START, SIGNATURE_STATUS_DONE);
 
     // Read the start signature.
-    const auto response = read_register<std::string>(SIGNATURE_START);
-    EVLOG_info << "Started the transaction with " << response;
+    start_signed_meter_value = read_register<std::string>(SIGNATURE_START);
+    EVLOG_info << "Started the transaction with " << start_signed_meter_value;
 
     TransactionStartResponse out{TransactionRequestStatus::OK};
-    out.signed_meter_value = {response, "OCMF"};
     return out;
 }
 
@@ -155,7 +154,8 @@ TransactionStopResponse powermeterImpl::handle_stop_transaction_impl(const std::
     const auto response = read_register<std::string>(SIGNATURE_STOP);
     EVLOG_info << "Stopped the transaction with " << response;
 
-    return {TransactionRequestStatus::OK, types::units_signed::SignedMeterValue{response, "OCMF"}};
+    return {TransactionRequestStatus::OK, types::units_signed::SignedMeterValue{start_signed_meter_value, "OCMF"},
+            types::units_signed::SignedMeterValue{response, "OCMF"}};
 }
 
 TransactionStartResponse powermeterImpl::handle_start_transaction(TransactionReq& value) {
@@ -173,7 +173,7 @@ TransactionStopResponse powermeterImpl::handle_stop_transaction(std::string& tra
         return handle_stop_transaction_impl(transaction_id);
     } catch (const std::exception& _ex) {
         EVLOG_error << "Failed to stop the transaction: " << _ex.what();
-        return {TransactionRequestStatus::UNEXPECTED_ERROR, {}, _ex.what()};
+        return {TransactionRequestStatus::UNEXPECTED_ERROR, {}, {}, _ex.what()};
     }
 }
 
