@@ -7,7 +7,7 @@ SLOTS = [
   "rcd_2",
   "connector_lock_1",
   "connector_lock_2",
-  "temperature",
+  "phyverso_mcu_temperature",
   "system_specific_data_1",
   "system_specific_data_2",
 ]
