@@ -1,6 +1,8 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository", "crate")
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
 
 def everest_core_repos():
     http_archive(
@@ -176,3 +178,21 @@ cc_library(
 )
         """
     )
+    crates_repository(
+        name = "everest_core_crate_index",
+        cargo_lockfile = "@everest-core//modules:Cargo.lock",
+        isolated = False,
+        manifests = [
+            "@everest-core//modules:Cargo.toml",
+            "@everest-core//modules/RsIskraMeter:Cargo.toml",
+            "@everest-core//modules/RsPaymentTerminal:Cargo.toml",
+            "@everest-core//modules/rust_examples/RsExample:Cargo.toml",
+            "@everest-core//modules/rust_examples/RsExampleUser:Cargo.toml",
+        ],
+        annotations = {
+            "everestrs": [crate.annotation(
+                crate_features = ["build_bazel"],
+            )],
+        },
+    )
+    crate_universe_dependencies()
