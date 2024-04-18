@@ -22,7 +22,7 @@ def everest_core_repos():
         git_repository,
         name = "everest-framework",
         remote = "https://github.com/qwello/everest-framework.git",
-        commit = "2306559764824a61406da6641985517e3b61f193",
+        commit = "3e767e2a5652d3acb97d01fc88aae2f04f3f5282",
     )
 
     maybe(
