@@ -226,6 +226,14 @@ impl PaymentTerminalModule {
                 acc + chunk.cost.unwrap_or(MoneyAmount { value: 0 }).value
             });
 
+        if total_cost == 0 {
+            log::info!("Got session with cost 0, cancelling transaction");
+            self.feig.cancel_transaction()?;
+
+            // We don't need to publish transaction summary in this case, since the transaction was canceled.
+            Ok(())
+        }
+
         let res = self
             .feig
             .commit_transaction(&value.id_tag.id_token.value, total_cost as u64)?;
