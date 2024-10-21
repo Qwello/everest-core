@@ -38,6 +38,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "RsLedDriver"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "everestrs",
+ "everestrs-build",
+ "log",
+]
+
+[[package]]
 name = "RsPaymentTerminal"
 version = "0.1.0"
 dependencies = [
