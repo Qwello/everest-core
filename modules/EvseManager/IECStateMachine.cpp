@@ -505,7 +505,8 @@ void IECStateMachine::connector_force_unlock() {
         cp = cp_state;
     }
 
-    if (cp == RawCPState::B or cp == RawCPState::C) {
+    // Unlocking in state C violates regulations and risks the user.
+    if (cp == RawCPState::A or cp == RawCPState::B) {
         force_unlocked = true;
         check_connector_lock();
     }
