@@ -509,6 +509,14 @@ void IECStateMachine::connector_force_unlock() {
         force_unlocked = true;
         check_connector_lock();
     }
+
+    // In state A, send unlock unconditionally.
+    if (cp == RawCPState::A) {
+        signal_unlock();
+
+        // This should already be set to false, but to be on the safe side:
+        is_locked = false;
+    }
 }
 
 void IECStateMachine::check_connector_lock() {
