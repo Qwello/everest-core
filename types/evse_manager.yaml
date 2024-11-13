@@ -182,6 +182,10 @@ types:
         description: Exported meter value
         type: object
         $ref: /powermeter#/Powermeter
+      timestamp:
+        description: Session start time in RFC3339 format
+        type: string
+        format: date-time   
   TransactionStarted:
     description: Data for the TransactionStarted event
     type: object

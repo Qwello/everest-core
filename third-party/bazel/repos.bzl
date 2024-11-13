@@ -59,3 +59,173 @@ def everest_core_repos():
             "@everest-core//third-party/bazel:BUILD.sigslot.bazel",
         ],
     )
+
+    maybe(
+        git_repository,
+        name = "everest-utils",
+        remote = "https://github.com/Qwello/everest-utils.git",
+        commit = "8d8c1b7172d114a6f4a0fc5f4d6e2d8ae1a0da82",
+    )
+
+    maybe(
+        http_archive,
+        name = "rules_python",
+        sha256 = "9acc0944c94adb23fba1c9988b48768b1bacc6583b52a2586895c5b7491e2e31",
+        strip_prefix = "rules_python-0.27.0",
+        url = "https://github.com/bazelbuild/rules_python/releases/download/0.27.0/rules_python-0.27.0.tar.gz",
+    )
+
+    maybe(
+        git_repository,
+        name = "pugixml",
+        remote = "https://github.com/zeux/pugixml.git",
+        tag = "v1.12.1",
+        build_file_content = """
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "libpugixml",
+    cache_entries = {
+    },
+    lib_source = "@pugixml//:all_srcs",
+    visibility = ["//visibility:public"],
+)
+        """
+    )
+
+    maybe(
+        git_repository,
+        name = "libsunspec",
+        remote = "https://github.com/EVerest/libsunspec.git",
+        tag = "v0.2.0",
+        build_file_content = """
+cc_library(
+    name = "libsunspec",
+    srcs = glob(["src/**/*.cpp"]),
+    hdrs = glob(["include/**/*.hpp"]),
+    deps = [
+        "@com_github_everest_liblog//:liblog",
+        "@com_github_nlohmann_json//:json",
+        "@libmodbus//:libmodbus",
+        "@//third-party/bazel:boost_program_options",
+    ],
+    strip_include_prefix = "include",
+)
+        """
+    )
+
+    maybe(
+        git_repository,
+        name = "libmodbus",
+        remote = "https://github.com/EVerest/libmodbus.git",
+        tag = "v0.3.0",
+        build_file_content = """
+cc_library(
+    name = "libmodbus_connection",
+    srcs = glob(["lib/connection/src/**/*.cpp"]),
+    hdrs = glob(["lib/connection/include/**/*.hpp"]),
+    strip_include_prefix = "lib/connection/include",
+    deps = [
+        "@@com_github_everest_liblog//:liblog",
+    ]
+)
+
+cc_library(
+    name = "libmodbus",
+    srcs = glob(["src/**/*.cpp"]),
+    hdrs = glob(["include/**/*.hpp"]),
+    deps = [
+        "@com_github_everest_liblog//:liblog",
+        ":libmodbus_connection",
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+        """
+    )
+
+    maybe(
+        git_repository,
+        name = "sigslot",
+        remote = "https://github.com/palacaze/sigslot",
+        tag = "v1.2.0",
+        build_file_content = """
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "sigslot",
+    cache_entries = {
+        "SIGSLOT_COMPILE_EXAMPLES": "OFF",
+    },
+    lib_source = "@sigslot//:all_srcs",
+    out_headers_only = True,
+    visibility = ["//visibility:public"],
+)
+        """
+    )
+
+    
+    maybe(
+        git_repository,
+        name = "libsunspec",
+        remote = "https://github.com/EVerest/libsunspec.git",
+        tag = "v0.2.0",
+        build_file_content = """
+cc_library(
+    name = "libsunspec",
+    srcs = glob(["src/**/*.cpp"]),
+    hdrs = glob(["include/**/*.hpp"]),
+    deps = [
+        "@com_github_everest_liblog//:liblog",
+        "@com_github_nlohmann_json//:json",
+        "@libmodbus//:libmodbus",
+        "@//third-party/bazel:boost_program_options",
+    ],
+    strip_include_prefix = "include",
+)
+        """
+    )
+
+    maybe(
+        git_repository,
+        name = "libtimer",
+        remote = "https://github.com/EVerest/libtimer.git",
+        tag = "v0.1.1",
+        build_file_content = """
+cc_library(
+    name = "libtimer",
+    hdrs = ["include/everest/timer.hpp"],
+    deps = [],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+)
+        """
+    )
+    crates_repository(
+        name = "everest_core_crate_index",
+        cargo_lockfile = "@everest-core//modules:Cargo.lock",
+        isolated = False,
+        manifests = [
+            "@everest-core//modules:Cargo.toml",
+            "@everest-core//modules/RsIskraMeter:Cargo.toml",
+            "@everest-core//modules/RsPaymentTerminal:Cargo.toml",
+            "@everest-core//modules/rust_examples/RsExample:Cargo.toml",
+            "@everest-core//modules/rust_examples/RsExampleUser:Cargo.toml",
+        ],
+        annotations = {
+            "everestrs": [crate.annotation(
+                crate_features = ["build_bazel"],
+            )],
+        },
+    )
+    crate_universe_dependencies()

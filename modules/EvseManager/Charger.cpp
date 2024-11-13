@@ -1121,6 +1121,11 @@ bool Charger::cancel_transaction(const types::evse_manager::StopTransactionReque
             pwm_off();
         }
 
+        // FIXME(evgeny): We disable pwm here since we need to get signed meter values.
+        // Maybe state machine should be refactored and cancelTransaction should trigger
+        // transition to EvseState::Finished, with active transaction.
+        // This way, the signed meter values will be retrieved there.
+        pwm_off();
         shared_context.transaction_active = false;
         shared_context.last_stop_transaction_reason = request.reason;
         shared_context.stop_transaction_id_token = request.id_tag;

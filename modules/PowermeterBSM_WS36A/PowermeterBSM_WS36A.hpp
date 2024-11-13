@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
-#ifndef GENERIC_POWERMETER_HPP
-#define GENERIC_POWERMETER_HPP
+#ifndef POWERMETER_BSM_WS36A_HPP
+#define POWERMETER_BSM_WS36A_HPP
 
 //
 // AUTO GENERATED - MARKED REGIONS WILL BE KEPT
@@ -14,7 +14,6 @@
 #include <generated/interfaces/powermeter/Implementation.hpp>
 
 // headers for required interface implementations
-#include <generated/interfaces/powermeter/Interface.hpp>
 #include <generated/interfaces/serial_communication_hub/Interface.hpp>
 
 // ev@4bf81b14-a215-475c-a1d3-0a484ae48918:v1
@@ -25,21 +24,15 @@ namespace module {
 
 struct Conf {};
 
-class GenericPowermeter : public Everest::ModuleBase {
+class PowermeterBSM_WS36A : public Everest::ModuleBase {
 public:
-    GenericPowermeter() = delete;
-    GenericPowermeter(const ModuleInfo& info, std::unique_ptr<powermeterImplBase> p_main,
-                      std::unique_ptr<serial_communication_hubIntf> r_serial_comm_hub,
-                      std::vector<std::unique_ptr<powermeterIntf>> r_transactional_power_meter, Conf& config) :
-        ModuleBase(info),
-        p_main(std::move(p_main)),
-        r_serial_comm_hub(std::move(r_serial_comm_hub)),
-        r_transactional_power_meter(std::move(r_transactional_power_meter)),
-        config(config){};
+    PowermeterBSM_WS36A() = delete;
+    PowermeterBSM_WS36A(const ModuleInfo& info, std::unique_ptr<powermeterImplBase> p_main,
+                        std::unique_ptr<serial_communication_hubIntf> r_serial_comm_hub, Conf& config) :
+        ModuleBase(info), p_main(std::move(p_main)), r_serial_comm_hub(std::move(r_serial_comm_hub)), config(config){};
 
     const std::unique_ptr<powermeterImplBase> p_main;
     const std::unique_ptr<serial_communication_hubIntf> r_serial_comm_hub;
-    const std::vector<std::unique_ptr<powermeterIntf>> r_transactional_power_meter;
     const Conf& config;
 
     // ev@1fce4c5e-0ab8-41bb-90f7-14277703d2ac:v1
@@ -67,4 +60,4 @@ private:
 
 } // namespace module
 
-#endif // GENERIC_POWERMETER_HPP
+#endif // POWERMETER_BSM_WS36A_HPP

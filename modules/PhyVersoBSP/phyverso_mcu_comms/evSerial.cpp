@@ -184,6 +184,10 @@ bool evSerial::handle_McuToEverest_packet(uint8_t* buf, int len) {
         signal_pp_state(msg_in.connector, msg_in.payload.pp_state);
         break;
 
+    case McuToEverest_temperature_tag:
+        signal_temperature(msg_in.payload.temperature);
+        break;
+
     case McuToEverest_fan_state_tag:
         signal_fan_state(msg_in.payload.fan_state);
         break;
@@ -400,6 +404,7 @@ void evSerial::set_coil_state_request(int target_connector, CoilType type, bool 
 }
 
 void evSerial::lock(int target_connector, bool _lock) {
+    EVLOG_info << "Locking connector " << target_connector << " to " << _lock;
     EverestToMcu msg_out = EverestToMcu_init_default;
     msg_out.which_payload = EverestToMcu_connector_lock_tag;
     msg_out.payload.connector_lock = _lock;

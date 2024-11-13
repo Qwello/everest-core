@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Pionix GmbH and Contributors to EVerest
 #include "evse_managerImpl.hpp"
+#include <generated/types/powermeter.hpp>
 #include <utils/date.hpp>
 
 #include <date/date.h>
