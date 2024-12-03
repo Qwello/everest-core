@@ -14,6 +14,7 @@ message EverestToMcu {
     BootConfigResponse config_response = 8;
     FanState set_fan_state = 9;
     RcdCommand rcd_cmd = 10;
+    LedStateMessage set_led_state = 11;
   }
   int32 connector = 7; // 0: None, 1: Connector 1, 2: Connector 2
 }
@@ -87,6 +88,13 @@ message FanState {
   bool enabled = 2;
   uint32 duty = 3;  // in 0.1%, 1000 = 100%
   uint32 rpm = 4;
+}
+
+message LedStateMessage {
+  int32 red = 1;
+  int32 green = 2;
+  int32 blue = 3;
+  int32 brightness = 4;
 }
 
 enum LockState {

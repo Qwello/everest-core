@@ -89,6 +89,13 @@ typedef struct _FanState {
     uint16_t rpm;
 } FanState;
 
+typedef struct _LedStateMessage {
+    int32_t red;
+    int32_t green;
+    int32_t blue;
+    int32_t brightness;
+} LedStateMessage;
+
 typedef struct _CoilState {
     CoilType coil_type;
     bool coil_state; /* true -> on; false -> off */
@@ -169,6 +176,7 @@ typedef struct _EverestToMcu {
         BootConfigResponse config_response;
         FanState set_fan_state;
         RcdCommand rcd_cmd;
+        LedStateMessage set_led_state;
     } payload;
     int32_t connector; /* 0: None, 1: Connector 1, 2: Connector 2 */
 } EverestToMcu;
@@ -217,6 +225,7 @@ extern "C" {
 
 
 
+
 #define CoilState_coil_type_ENUMTYPE CoilType
 
 
@@ -235,6 +244,7 @@ extern "C" {
 #define KeepAlive_init_default                   {0, 0, 0, ""}
 #define Telemetry_init_default                   {0, 0}
 #define FanState_init_default                    {0, 0, 0, 0}
+#define LedStateMessage_init_default             {0, 0, 0, 0}
 #define CoilState_init_default                   {_CoilType_MIN, 0}
 #define BootConfigRequest_init_default           {0}
 #define BootConfigResponse_init_default          {_ConfigHardwareRevision_MIN, false, ConfigMotorLockType_init_default, false, ConfigMotorLockType_init_default}
@@ -248,6 +258,7 @@ extern "C" {
 #define KeepAlive_init_zero                      {0, 0, 0, ""}
 #define Telemetry_init_zero                      {0, 0}
 #define FanState_init_zero                       {0, 0, 0, 0}
+#define LedStateMessage_init_zero                {0, 0, 0, 0}
 #define CoilState_init_zero                      {_CoilType_MIN, 0}
 #define BootConfigRequest_init_zero              {0}
 #define BootConfigResponse_init_zero             {_ConfigHardwareRevision_MIN, false, ConfigMotorLockType_init_zero, false, ConfigMotorLockType_init_zero}
@@ -273,6 +284,10 @@ extern "C" {
 #define FanState_enabled_tag                     2
 #define FanState_duty_tag                        3
 #define FanState_rpm_tag                         4
+#define LedStateMessage_red_tag                  1
+#define LedStateMessage_green_tag                2
+#define LedStateMessage_blue_tag                 3
+#define LedStateMessage_brightness_tag           4
 #define CoilState_coil_type_tag                  1
 #define CoilState_coil_state_tag                 2
 #define ConfigMotorLockType_type_tag             1
@@ -308,6 +323,7 @@ extern "C" {
 #define EverestToMcu_config_response_tag         8
 #define EverestToMcu_set_fan_state_tag           9
 #define EverestToMcu_rcd_cmd_tag                 10
+#define EverestToMcu_set_led_state_tag           11
 #define EverestToMcu_connector_tag               7
 
 /* Struct field encoding specification for nanopb */
@@ -321,7 +337,8 @@ X(a, STATIC,   ONEOF,    BOOL,     (payload,reset,payload.reset),   6) \
 X(a, STATIC,   SINGULAR, INT32,    connector,         7) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload,config_response,payload.config_response),   8) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload,set_fan_state,payload.set_fan_state),   9) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rcd_cmd,payload.rcd_cmd),  10)
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rcd_cmd,payload.rcd_cmd),  10) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,set_led_state,payload.set_led_state),  11)
 #define EverestToMcu_CALLBACK NULL
 #define EverestToMcu_DEFAULT NULL
 #define EverestToMcu_payload_keep_alive_MSGTYPE KeepAlive
@@ -329,6 +346,7 @@ X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rcd_cmd,payload.rcd_cmd),  10)
 #define EverestToMcu_payload_config_response_MSGTYPE BootConfigResponse
 #define EverestToMcu_payload_set_fan_state_MSGTYPE FanState
 #define EverestToMcu_payload_rcd_cmd_MSGTYPE RcdCommand
+#define EverestToMcu_payload_set_led_state_MSGTYPE LedStateMessage
 
 #define McuToEverest_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload,keep_alive,payload.keep_alive),   1) \
@@ -385,6 +403,14 @@ X(a, STATIC,   SINGULAR, UINT32,   rpm,               4)
 #define FanState_CALLBACK NULL
 #define FanState_DEFAULT NULL
 
+#define LedStateMessage_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, INT32,    red,               1) \
+X(a, STATIC,   SINGULAR, INT32,    green,             2) \
+X(a, STATIC,   SINGULAR, INT32,    blue,              3) \
+X(a, STATIC,   SINGULAR, INT32,    brightness,        4)
+#define LedStateMessage_CALLBACK NULL
+#define LedStateMessage_DEFAULT NULL
+
 #define CoilState_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UENUM,    coil_type,         1) \
 X(a, STATIC,   SINGULAR, BOOL,     coil_state,        2)
@@ -436,6 +462,7 @@ extern const pb_msgdesc_t ErrorFlags_msg;
 extern const pb_msgdesc_t KeepAlive_msg;
 extern const pb_msgdesc_t Telemetry_msg;
 extern const pb_msgdesc_t FanState_msg;
+extern const pb_msgdesc_t LedStateMessage_msg;
 extern const pb_msgdesc_t CoilState_msg;
 extern const pb_msgdesc_t BootConfigRequest_msg;
 extern const pb_msgdesc_t BootConfigResponse_msg;
@@ -451,6 +478,7 @@ extern const pb_msgdesc_t RcdCommand_msg;
 #define KeepAlive_fields &KeepAlive_msg
 #define Telemetry_fields &Telemetry_msg
 #define FanState_fields &FanState_msg
+#define LedStateMessage_fields &LedStateMessage_msg
 #define CoilState_fields &CoilState_msg
 #define BootConfigRequest_fields &BootConfigRequest_msg
 #define BootConfigResponse_fields &BootConfigResponse_msg
@@ -468,6 +496,7 @@ extern const pb_msgdesc_t RcdCommand_msg;
 #define EverestToMcu_size                        83
 #define FanState_size                            15
 #define KeepAlive_size                           70
+#define LedStateMessage_size                     44
 #define McuToEverest_size                        83
 #define OpaqueData_size                          285
 #define PHYVERSO_PB_H_MAX_SIZE                   OpaqueData_size
