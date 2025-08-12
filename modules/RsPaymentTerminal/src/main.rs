@@ -230,29 +230,7 @@ impl PaymentTerminalModule {
                     continue;
                 }
 
-                match self.feig.read_card() {
-                    Ok(card_info) => return Ok(card_info),
-                    Err(e) => match e.downcast_ref::<Error>() {
-                        Some(Error::NoCardPresented) => {
-                            log::info!("No card presented");
-                            continue;
-                        }
-                        _ => {
-                            match e.downcast_ref::<ErrorMessages>() {
-                                Some(rejection_reason) => {
-                                    log::info!("Recieved rejection reason {}", rejection_reason);
-
-                                    publishers
-                                        .payment_terminal
-                                        .rejection_reason((*rejection_reason as u8).into())?;
-                                }
-                                None => log::info!("No error code provided"),
-                            };
-                            log::error!("Failed to read card: {e:?}");
-                            return Err(anyhow::anyhow!("Failed to read card: {e:?}"));
-                        }
-                    },
-                };
+                std::thread::sleep(Duration::from_secs(1));
             }
         };
         log::info!("Reading card");
