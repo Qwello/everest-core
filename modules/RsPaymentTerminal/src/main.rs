@@ -196,10 +196,10 @@ impl PaymentTerminalModule {
     /// don't flag the token as pre-validated to allow the consumers to add
     /// custom validation steps on top.
     fn begin_transaction(&self, publishers: &ModulePublisher) -> Result<()> {
-        let token: Option<String> = None;
+        let mut token: Option<String> = None;
 
         // Wait for the card.
-        let read_card_loop = || -> Result<CardInfo> {
+        let mut read_card_loop = || -> Result<CardInfo> {
             let mut timeout = std::time::Instant::now();
             let mut backoff_seconds = 1;
 
