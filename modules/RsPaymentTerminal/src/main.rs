@@ -253,6 +253,7 @@ impl PaymentTerminalModule {
                                 }
                                 None => log::info!("No error code provided"),
                             };
+                            log::error!("Failed to read card: {e:?}");
                             return Err(anyhow::anyhow!("Failed to read card: {e:?}"));
                         }
                     },
