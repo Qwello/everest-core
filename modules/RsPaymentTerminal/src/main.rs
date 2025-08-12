@@ -221,16 +221,16 @@ impl PaymentTerminalModule {
                             timeout = std::time::Instant::now()
                                 + Duration::from_secs(backoff_seconds * 2);
                             log::info!(
-                                "Failed to receive token, retrying in {backoff_seconds} seconds"
+                                "Failed to receive invoice token, retrying in {backoff_seconds} seconds"
                             );
                         } else {
-                            log::info!("Received the BankSessionToken {token:?}");
+                            log::info!("Received the invoice token {token:?}");
                         }
                     }
                 }
 
                 if !self.has_everything_enabled() && !self.is_enabled() {
-                    log::debug!("Reading is disabled, waiting...");
+                    log::info!("Reading is disabled, waiting...");
                     std::thread::sleep(Duration::from_secs(1));
                     continue;
                 }
@@ -239,7 +239,7 @@ impl PaymentTerminalModule {
                     Ok(card_info) => return Ok(card_info),
                     Err(e) => match e.downcast_ref::<Error>() {
                         Some(Error::NoCardPresented) => {
-                            log::debug!("No card presented");
+                            log::info!("No card presented");
                             continue;
                         }
                         _ => {
@@ -251,7 +251,7 @@ impl PaymentTerminalModule {
                                         .payment_terminal
                                         .rejection_reason((*rejection_reason as u8).into())?;
                                 }
-                                None => log::debug!("No error code provided"),
+                                None => log::info!("No error code provided"),
                             };
                             return Err(anyhow::anyhow!("Failed to read card: {e:?}"));
                         }
@@ -259,6 +259,7 @@ impl PaymentTerminalModule {
                 };
             }
         };
+        log::info!("Reading card");
         let card_info = read_card_loop()?;
 
         if let Some(provided_token) = match card_info {
