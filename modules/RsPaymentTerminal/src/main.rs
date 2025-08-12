@@ -207,7 +207,7 @@ impl PaymentTerminalModule {
                 // Attempting to get an invoice token from the backend
                 if token.is_none() {
                     if timeout.elapsed() > Duration::from_secs(0) {
-                        let token = {
+                        token = {
                             match publishers.bank_session_token_slots.get(0) {
                                 None => None,
                                 Some(publisher) => publisher.get_bank_session_token()?.token,
