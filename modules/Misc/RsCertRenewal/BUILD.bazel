@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 load("@everest_core_crate_index//:defs.bzl", "all_crate_deps")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 
@@ -32,6 +32,14 @@ rust_binary(
         "@everest-framework//everestrs/everestrs:everestrs_sys",
         "@everest-framework//everestrs/everestrs:everestrs_bridge",
     ],
+)
+
+rust_test(
+    name = "RsCertRenewalTest",
+    edition = "2021",
+    srcs = [],
+    crate = ":RsCertRenewalBinary",
+    deps = all_crate_deps(normal_dev = True),
 )
 
 binary = ":RsCertRenewalBinary"

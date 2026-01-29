@@ -13,3 +13,6 @@ everestrs = { workspace = true }
 log = "0.4"
 ureq = "2.9"
 x509-parser = { version = "0.16", features = ["verify"] }
+
+[dev-dependencies]
+tempfile = "3.10"
