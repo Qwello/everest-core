@@ -32,6 +32,19 @@ struct ChargerDerived : public Charger {
     constexpr void current_state(EvseState state) {
         get_shared_context().current_state = state;
     }
+
+    // setters for HLC resume charging tests
+    constexpr void set_hlc_charging_active(bool active) {
+        get_shared_context().hlc_charging_active = active;
+    }
+
+    constexpr void set_transaction_active(bool active) {
+        get_shared_context().transaction_active = active;
+    }
+
+    constexpr void set_hlc_terminate_pause(HlcTerminatePause value) {
+        get_shared_context().hlc_charging_terminate_pause = value;
+    }
 };
 
 // class that creates a consistent starting state for tests
@@ -640,6 +653,104 @@ TEST_F(ChargerTest, EnableDisableSourceDisableEnable) {
     EXPECT_EQ(last_event, default_event);
     // updated because not connector 0
     EXPECT_EQ(charger->current_state(), Charger::EvseState::Idle);
+}
+
+// ----------------------------------------------------------------------------
+// tests for resume_charging() and signal_hlc_resume_charging
+// Verifies fix for https://github.com/EVerest/everest-core/issues/1690:
+// resume_charging should signal HLC to resume when HLC charging is active
+
+struct HlcResumeChargingTest : public ChargerTest {
+    bool hlc_resume_signal_received{false};
+    bool slac_start_signal_received{false};
+
+    void SetUp() override {
+        ChargerTest::SetUp();
+        hlc_resume_signal_received = false;
+        slac_start_signal_received = false;
+        charger->signal_hlc_resume_charging.connect([this] { hlc_resume_signal_received = true; });
+        charger->signal_slac_start.connect([this] { slac_start_signal_received = true; });
+    }
+};
+
+TEST_F(HlcResumeChargingTest, ResumeChargingSignalsHlcWhenHlcActive) {
+    // Set up preconditions for HLC resume path:
+    // hlc_charging_active = true, transaction_active = true, current_state = ChargingPausedEVSE
+    charger->set_hlc_charging_active(true);
+    charger->set_transaction_active(true);
+    charger->current_state(Charger::EvseState::ChargingPausedEVSE);
+    charger->set_hlc_terminate_pause(Charger::HlcTerminatePause::Pause);
+
+    EXPECT_FALSE(hlc_resume_signal_received);
+
+    // Call resume_charging
+    bool result = charger->resume_charging();
+
+    // Verify signal was emitted and state changed
+    EXPECT_TRUE(result);
+    EXPECT_TRUE(hlc_resume_signal_received);
+    EXPECT_EQ(charger->current_state(), Charger::EvseState::PrepareCharging);
+    // SLAC start should not be called when HlcTerminatePause is Pause
+    EXPECT_FALSE(slac_start_signal_received);
+}
+
+TEST_F(HlcResumeChargingTest, ResumeChargingSignalsSlacStartOnTerminate) {
+    // When hlc_charging_terminate_pause is Terminate, SLAC should also be restarted
+    charger->set_hlc_charging_active(true);
+    charger->set_transaction_active(true);
+    charger->current_state(Charger::EvseState::ChargingPausedEVSE);
+    charger->set_hlc_terminate_pause(Charger::HlcTerminatePause::Terminate);
+
+    EXPECT_FALSE(hlc_resume_signal_received);
+    EXPECT_FALSE(slac_start_signal_received);
+
+    bool result = charger->resume_charging();
+
+    EXPECT_TRUE(result);
+    EXPECT_TRUE(hlc_resume_signal_received);
+    EXPECT_TRUE(slac_start_signal_received);
+    EXPECT_EQ(charger->current_state(), Charger::EvseState::PrepareCharging);
+}
+
+TEST_F(HlcResumeChargingTest, ResumeChargingNoSignalWhenHlcNotActive) {
+    // When HLC is not active, signal_hlc_resume_charging should NOT be emitted
+    charger->set_hlc_charging_active(false);
+    charger->set_transaction_active(true);
+    charger->current_state(Charger::EvseState::ChargingPausedEVSE);
+
+    bool result = charger->resume_charging();
+
+    // Should take the non-HLC path: returns true but no HLC signal
+    EXPECT_TRUE(result);
+    EXPECT_FALSE(hlc_resume_signal_received);
+    // State should change to WaitingForEnergy (non-HLC path)
+    EXPECT_EQ(charger->current_state(), Charger::EvseState::WaitingForEnergy);
+}
+
+TEST_F(HlcResumeChargingTest, ResumeChargingFailsWhenNotPaused) {
+    // resume_charging should return false if not in ChargingPausedEVSE state
+    charger->set_hlc_charging_active(true);
+    charger->set_transaction_active(true);
+    charger->current_state(Charger::EvseState::Charging);
+
+    bool result = charger->resume_charging();
+
+    EXPECT_FALSE(result);
+    EXPECT_FALSE(hlc_resume_signal_received);
+    EXPECT_EQ(charger->current_state(), Charger::EvseState::Charging);
+}
+
+TEST_F(HlcResumeChargingTest, ResumeChargingFailsWhenNoTransaction) {
+    // resume_charging should return false if no transaction is active
+    charger->set_hlc_charging_active(true);
+    charger->set_transaction_active(false);
+    charger->current_state(Charger::EvseState::ChargingPausedEVSE);
+
+    bool result = charger->resume_charging();
+
+    EXPECT_FALSE(result);
+    EXPECT_FALSE(hlc_resume_signal_received);
+    EXPECT_EQ(charger->current_state(), Charger::EvseState::ChargingPausedEVSE);
 }
 
 } // namespace

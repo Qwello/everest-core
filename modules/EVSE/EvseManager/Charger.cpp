@@ -1137,6 +1137,7 @@ bool Charger::resume_charging() {
 
     if (shared_context.hlc_charging_active and shared_context.transaction_active and
         shared_context.current_state == EvseState::ChargingPausedEVSE) {
+        signal_hlc_resume_charging();
         shared_context.current_state = EvseState::PrepareCharging;
         if (shared_context.hlc_charging_terminate_pause == HlcTerminatePause::Terminate) {
             signal_slac_start(); // wake up SLAC as well
